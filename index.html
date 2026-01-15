@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisaCheck - Visa Requirements Encyclopedia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">✈</span>
+                <span class="logo-text">VisaCheck</span>
+            </div>
+            <p class="tagline">Instant visa requirements lookup</p>
+        </header>
+
+        <!-- Search Section -->
+        <section class="search-section">
+            <div class="search-card">
+                <div class="search-row">
+                    <div class="search-field">
+                        <label>From</label>
+                        <div class="country-select">
+                            <span class="flag" id="from-flag">🏳️</span>
+                            <select id="from-country">
+                                <option value="">Loading countries...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="search-divider">
+                        <span class="arrow">→</span>
+                    </div>
+                    <div class="search-field">
+                        <label>To</label>
+                        <div class="country-select">
+                            <span class="flag" id="to-flag">🏳️</span>
+                            <select id="to-country">
+                                <option value="">Loading countries...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="search-btn" id="search-btn">Search</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="results">
+            <!-- Summary Card -->
+            <div class="summary-card">
+                <div class="status-badge evisa">
+                    <span class="status-icon">✅</span>
+                    <span class="status-text">eVisa Required</span>
+                </div>
+                <div class="summary-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Stay Duration</span>
+                        <span class="detail-value">Up to 90 Days</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Passport Validity</span>
+                        <span class="detail-value">Minimum 6 months required</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Requirements Grid -->
+            <div class="requirements-grid">
+                <!-- Document Checklist -->
+                <div class="req-card">
+                    <div class="req-header">
+                        <span class="req-icon">📋</span>
+                        <h3>Document Checklist</h3>
+                    </div>
+                    <ul class="req-list">
+                        <li>Valid Passport (at least 2 blank pages)</li>
+                        <li>Digital Passport Photo (4.5cm × 3.5cm)</li>
+                        <li>Proof of onward travel (Flight booking)</li>
+                        <li>Hotel reservation confirmation</li>
+                    </ul>
+                </div>
+
+                <!-- Official Cost -->
+                <div class="req-card">
+                    <div class="req-header">
+                        <span class="req-icon">💰</span>
+                        <h3>Official Cost</h3>
+                    </div>
+                    <ul class="req-list">
+                        <li>Visa Fee: <strong>$25.00 USD</strong></li>
+                        <li>Service Fee: <strong>$6.00 USD</strong></li>
+                        <li>Payable via Visa/Mastercard/Amex</li>
+                    </ul>
+                </div>
+
+                <!-- Processing Time -->
+                <div class="req-card">
+                    <div class="req-header">
+                        <span class="req-icon">⏱️</span>
+                        <h3>Processing Time</h3>
+                    </div>
+                    <ul class="req-list">
+                        <li>Standard: <strong>3–5 Business Days</strong></li>
+                        <li>Urgent: <strong>24 Hours</strong> (+$15 fee)</li>
+                    </ul>
+                </div>
+
+                <!-- Official Links -->
+                <div class="req-card links-card">
+                    <div class="req-header">
+                        <span class="req-icon">🔗</span>
+                        <h3>Official Links</h3>
+                    </div>
+                    <div class="link-buttons">
+                        <a href="#" class="link-btn primary">
+                            <span>Apply on Govt. Portal</span>
+                            <span class="link-badge">Official</span>
+                        </a>
+                        <a href="#" class="link-btn secondary">
+                            <span>Download PDF Checklist</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
