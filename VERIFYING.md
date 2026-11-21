@@ -49,3 +49,14 @@ Rules:
 * Tick the countries in `VERIFICATION_QUEUE.md` with the date, e.g. `- [x] IN India (2026-11-21)`.
 * Open a PR titled `Verified rules: batch <N> (<country names>)` with: the sources used per country, any API disagreements, and anything that stayed `check`.
 * A human reviews and merges. Do not merge automatically.
+
+## 6. Monthly re-checks (keep verified data current)
+
+Rules change, so verified data must not go stale. On every daily run, **before** the new batch:
+
+* Find verified destinations whose `verified` date in `js/rules.js` is **more than 30 days old**.
+* Re-check the **5 oldest** against their official sources (same standard as above).
+* Update any rule that changed, set `verified` to today's date, and adjust tests.
+* Include them in the same PR under a heading **Re-checked**, listing what changed (or "no changes").
+
+The site also cross-checks every verified result against the live API on each search, and warns visitors if they disagree. Treat any such disagreement you notice as a reason to re-check that country first.

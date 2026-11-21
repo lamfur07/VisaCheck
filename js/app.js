@@ -265,6 +265,36 @@
     }
   }
 
+  // Cross-check verified rules against the live API, so visitors see current data too.
+  const GROUP = { citizen: "none", resident: "none", free: "none", voa: "arrival", eta: "online", evisa: "online", visa: "advance", permit: "advance" };
+  const GROUP_LABEL = { none: "no visa needed", arrival: "visa on arrival", online: "an online visa or authorisation", advance: "a visa before travel" };
+  async function liveCheck(res, id) {
+    const slot = $("#liveCheck");
+    if (!slot) return;
+    const best = res.best;
+    const skip = !CFG.apiProxyUrl || !res.verified || !["tourism", "business"].includes(state.purpose) ||
+      ["citizen", "resident", "banned", "check"].includes(best.status);
+    if (skip) { slot.remove(); return; }
+    slot.innerHTML = '<span class="live pending">Checking live data…</span>';
+    try {
+      const live = await API.check(best.nationality, state.dest, { purpose: state.purpose, destName: res.destName });
+      if (id !== runId || !document.body.contains(slot)) return;
+      const ours = GROUP[best.status], theirs = GROUP[live.status];
+      if (!theirs) { slot.remove(); return; }
+      if (ours === theirs) {
+        slot.innerHTML = '<span class="live ok">✓ Confirmed by live data</span>';
+      } else {
+        slot.innerHTML = "";
+        const warn = document.createElement("div");
+        warn.className = "alert warn live-diff";
+        warn.innerHTML = `<span aria-hidden="true">🔄</span><span>Live data says <strong>${esc(GROUP_LABEL[theirs])}</strong>${live.auth && live.auth.name ? ` (${esc(live.auth.name)})` : ""}. The rules may have changed since our last check on ${esc(res.verifiedOn || LAST_VERIFIED)}. Confirm on the official links below before you book.</span>`;
+        slot.closest(".verdict").appendChild(warn);
+      }
+    } catch (err) {
+      if (id === runId && document.body.contains(slot)) slot.innerHTML = '<span class="live off">Live check unavailable right now</span>';
+    }
+  }
+
   function renderSkeleton() {
     $("#results").innerHTML = `<article class="card skeleton" aria-busy="true"><div class="sk sm"></div><div class="sk lg"></div><div class="sk md"></div><div class="sk md"></div></article>`;
   }
@@ -302,7 +332,8 @@
       ${facts.length ? `<div class="facts">${facts.map(([k, v]) => `<div class="fact"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("")}</div>` : ""}
       <div class="cta-row">
         ${applyUrl ? `<a class="apply no-print" href="${esc(applyUrl)}" target="_blank" rel="noopener">Apply on the official site ↗</a>` : ""}
-        <span class="source">${verified ? "✓ Verified rules · " + esc(verifiedOn || LAST_VERIFIED) : "Live data · confirm with the embassy"}</span>
+        <span class="source">${verified ? "✓ Verified rules · checked " + esc(verifiedOn || LAST_VERIFIED) : "Live data · confirm with the embassy"}</span>
+        ${verified ? '<span id="liveCheck" class="no-print"></span>' : ""}
       </div>
       ${(best.warn || []).map((w) => `<div class="alert warn"><span aria-hidden="true">⚠️</span><span>${esc(w)}</span></div>`).join("")}
       ${(best.notes || []).map((n) => `<div class="alert note"><span aria-hidden="true">💡</span><span>${esc(n)}</span></div>`).join("")}
@@ -392,6 +423,7 @@
       const res = await evaluate();
       if (id !== runId) return; // a newer search started
       render(res);
+      liveCheck(res, id);
     } catch (err) {
       if (id !== runId || (err && err.code === "ABORT")) return;
       console.error(err);
