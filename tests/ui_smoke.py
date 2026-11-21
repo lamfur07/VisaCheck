@@ -56,6 +56,15 @@ with sync_playwright() as p:
     check("checklist progress updates", "1 of" in pg.inner_text("#progLabel"))
     if SHOTS: pg.screenshot(path=str(SHOTS / "2-result.png"), full_page=True)
 
+    # 1b. Dropdowns list every country (no cap)
+    pg = page(); pg.goto(BASE); pg.click("#destInput")
+    total = pg.evaluate("window.COUNTRIES.length")
+    check(f"destination list shows all {total} countries", pg.locator("#destList li[data-code]").count() == total)
+    pg.click("#natInput")
+    check("passport list shows all countries", pg.locator("#natList li[data-code]").count() == total)
+    pg.fill("#destInput", "zimb"); 
+    check("search finds Zimbabwe", "Zimbabwe" in pg.inner_text("#destList"))
+
     # 2. Validation
     pg = page(); pg.goto(BASE); pg.click("#checkBtn")
     check("validation: needs passport", "passport" in pg.inner_text("#formError"))
@@ -71,7 +80,9 @@ with sync_playwright() as p:
     check("bad hash: no crash, nothing run", pg.locator(".verdict").count() == 0 and pg.locator(".chip").count() == 1)
 
     # 5. Unverified destination without proxy
-    pg = page(); pg.goto(BASE + "#n=US&d=TH&p=tourism"); pg.wait_for_selector(".verdict")
+    pg = page()
+    pg.route("**/js/config.js", lambda r: r.fulfill(content_type="application/javascript", body='window.VISACHECK_CONFIG={apiProxyUrl:""};'))
+    pg.goto(BASE + "#n=US&d=TH&p=tourism"); pg.wait_for_selector(".verdict")
     check("no proxy: honest fallback", "don't have verified rules" in pg.inner_text(".verdict"))
 
     # 6. Unverified destination with mocked proxy, including XSS attempt
