@@ -1,0 +1,10 @@
+name = "visacheck-proxy"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+# Comma separated list of sites allowed to call this proxy, e.g.
+# "https://lamfur07.github.io,http://localhost:8000"
+ALLOWED_ORIGINS = "https://lamfur07.github.io,http://localhost:8000"
+
+# The RapidAPI key is NOT stored here. Run:  wrangler secret put RAPIDAPI_KEY
