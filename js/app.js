@@ -52,8 +52,7 @@
         .sort((a, b) => {
           const as = a[1].toLowerCase().startsWith(q), bs = b[1].toLowerCase().startsWith(q);
           return as === bs ? a[1].localeCompare(b[1]) : as ? -1 : 1;
-        })
-        .slice(0, 80);
+        });
       active = Math.min(active, Math.max(opts.length - 1, 0));
       list.innerHTML = opts.length
         ? opts.map(([c, n], i) => `<li role="option" id="${list.id}-${c}" data-code="${c}" aria-selected="${i === active}"><span aria-hidden="true">${flag(c)}</span>${esc(n)}${badge && badge(c) ? `<span class="vbadge">${badge(c)}</span>` : ""}</li>`).join("")
@@ -418,6 +417,7 @@
 
   // ---------- Init ----------
   $("#verified").textContent = LAST_VERIFIED;
+  destInput.placeholder = `Search all ${window.COUNTRIES.length} countries and territories`;
   const ready = fromHash();
   renderNats(); setDest(state.dest); renderPurpose(); renderDocs();
   if (ready) run();
