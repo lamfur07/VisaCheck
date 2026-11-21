@@ -92,6 +92,16 @@ with sync_playwright() as p:
     check("api: yellow fever item shown", "Yellow fever" in pg.inner_text("#checklistCard"))
     if SHOTS: pg.screenshot(path=str(SHOTS / "3-api.png"), full_page=True)
 
+    # 6b. Live cross-check on verified destinations
+    pg = page(); with_proxy(pg, "ok"); pg.goto(BASE + "#n=GB&d=US&p=tourism"); pg.wait_for_selector(".live.ok", timeout=5000)
+    check("live check: ESTA vs eVisa counts as agreement", pg.locator(".live.ok").count() == 1)
+    pg = page(); with_proxy(pg, "ok"); pg.goto(BASE + "#n=IN&d=US&p=tourism"); pg.wait_for_selector(".live-diff", timeout=5000)
+    check("live check: disagreement shows warning", "may have changed" in pg.inner_text(".live-diff"))
+    pg = page(); with_proxy(pg, "down"); pg.goto(BASE + "#n=GB&d=US&p=tourism"); pg.wait_for_selector(".live.off", timeout=5000)
+    check("live check: API down keeps verified result", "ESTA" in pg.inner_text(".verdict"))
+    pg = page(); with_proxy(pg, "ok"); pg.goto(BASE + "#n=IN&d=US&p=tourism&doc=pr:US"); pg.wait_for_timeout(800)
+    check("live check: skipped for residence-based result", pg.locator("#liveCheck").count() == 0)
+
     # 7. API errors
     pg = page(); with_proxy(pg, "500"); pg.goto(BASE + "#n=IN&d=TH&p=tourism"); pg.wait_for_selector(".verdict")
     check("api 500: friendly error + retry", pg.locator("#retryBtn").count() == 1)

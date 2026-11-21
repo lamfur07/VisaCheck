@@ -97,7 +97,7 @@
   // Turkmenistan: only immigrant visas suspended, so visitors follow normal rules.
 
   const US = {
-    id: "US", name: "United States", flag: "🇺🇸",
+    id: "US", name: "United States", flag: "🇺🇸", verified: "2026-11-20",
     links: [
       ["Do I need a visa? (travel.state.gov)", "https://travel.state.gov/content/travel/en/us-visas.html"],
       ["Official ESTA application", "https://esta.cbp.dhs.gov/"],
@@ -199,7 +199,7 @@
   const CA_ETA_X = S("AG AR BR CR ID MY MX MA PA PH KN LC VC SC TH TT UY");
 
   const CA = {
-    id: "CA", name: "Canada", flag: "🇨🇦",
+    id: "CA", name: "Canada", flag: "🇨🇦", verified: "2026-11-20",
     links: [
       ["Find out if you need a visa (IRCC)", "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/entry-requirements-country.html"],
       ["Official eTA application", "https://www.canada.ca/en/immigration-refugees-citizenship/services/visit-canada/eta.html"],
@@ -272,7 +272,7 @@
   const UK_ETA = S("QA BH KW OM AE SA AG AR AU BB BZ BR BN CA CL CR GD GT GY HK IL JP KI MO MY MV MH MU MX FM NZ PW PG PY PE KN VC WS SC SG SB KR TW BS TO TV US UY AD AT BE BG HR CY CZ DK EE FI FR DE GR HU IS IT LV LI LT LU MT MC NL NO PL PT RO SM SK SI ES SE CH VA");
 
   const GB = {
-    id: "GB", name: "United Kingdom", flag: "🇬🇧",
+    id: "GB", name: "United Kingdom", flag: "🇬🇧", verified: "2026-11-20",
     links: [
       ["Check if you need a UK visa", "https://www.gov.uk/check-uk-visa"],
       ["Official UK ETA application", "https://www.gov.uk/eta/apply"],
@@ -348,7 +348,7 @@
 
   function schengen(id, name, flag, portal, longStay) {
     return {
-      id, name, flag, schengen: true,
+      id, name, flag, schengen: true, verified: "2026-11-20",
       links: [
         [`${name}: official visa site`, portal],
         ["EU short-stay visa rules", "https://home-affairs.ec.europa.eu/policies/schengen/visa-policy_en"],
@@ -431,7 +431,7 @@
   const AU_EVISITOR = S("BG HR CY CZ EE HU LV LT PL RO SK SI AD AT BE DK FI FR DE GR IS IE IT LI LU MT MC NO PT SM ES SE CH NL VA GB");
 
   const AU = {
-    id: "AU", name: "Australia", flag: "🇦🇺",
+    id: "AU", name: "Australia", flag: "🇦🇺", verified: "2026-11-20",
     links: [
       ["Visa Finder (Home Affairs)", "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-finder"],
       ["ETA (subclass 601)", "https://immi.homeaffairs.gov.au/visas/getting-a-visa/visa-listing/electronic-travel-authority-601"],
@@ -498,7 +498,7 @@
   const JP_SIX_MONTH = S("AT DE IE LI CH GB");
 
   const JP = {
-    id: "JP", name: "Japan", flag: "🇯🇵",
+    id: "JP", name: "Japan", flag: "🇯🇵", verified: "2026-11-20",
     links: [
       ["Visa exemption list (MOFA)", "https://www.mofa.go.jp/j_info/visit/visa/short/novisa.html"],
       ["JAPAN eVISA", "https://www.evisa.mofa.go.jp/"],
@@ -543,7 +543,7 @@
   const AE_QUAL = ["US", "EU", "SCHENGEN", "GB", "SG", "JP", "KR", "AU", "NZ", "CA"];
 
   const AE = {
-    id: "AE", name: "United Arab Emirates", flag: "🇦🇪",
+    id: "AE", name: "United Arab Emirates", flag: "🇦🇪", verified: "2026-11-20",
     links: [
       ["ICP smart services (visas)", "https://smartservices.icp.gov.ae/"],
       ["GDRFA Dubai", "https://gdrfad.gov.ae/en"],
@@ -593,7 +593,7 @@
   const MX_VISA = ["US", "CA", "JP", "GB", "SCHENGEN"];
 
   const MX = {
-    id: "MX", name: "Mexico", flag: "🇲🇽",
+    id: "MX", name: "Mexico", flag: "🇲🇽", verified: "2026-11-20",
     links: [
       ["Countries that need a visa (INM)", "https://www.inm.gob.mx/gobmx/word/index.php/paises-requieren-visa-para-mexico/"],
       ["Countries that don't need a visa (INM)", "https://www.inm.gob.mx/gobmx/word/index.php/paises-no-requieren-visa-para-mexico/"],
