@@ -2,7 +2,7 @@
 window.VISACHECK_CONFIG = {
   // URL of your deployed proxy (see worker/worker.js), e.g. "https://visacheck-proxy.yourname.workers.dev".
   // Leave empty to run with the built-in verified rules only.
-  apiProxyUrl: "",
+  apiProxyUrl: "https://visacheck-proxy.uzairbawany7.workers.dev",
   // Request timeout for the proxy, in milliseconds.
   apiTimeoutMs: 12000
 };
