@@ -33,6 +33,10 @@
     const embassy = safeUrl(d.destination && d.destination.embassy_url);
 
     let status = statusFrom(primary);
+    // Unverified data is never allowed to say "entry restricted": third-party data is often stale,
+    // and a false "restricted" stops people travelling. Downgrade to "check" and show what the API said.
+    const flaggedRestricted = status === "banned";
+    if (flaggedRestricted) status = "check";
     const options = [primary, secondary].filter((r) => r && txt(r.name)).map((r) => ({
       name: txt(r.name), duration: txt(r.duration), url: safeUrl(r.link)
     }));
@@ -57,6 +61,7 @@
     if (embassy) links.push(["Embassy or immigration site", embassy]);
 
     const notes = [];
+    if (flaggedRestricted) notes.push(`The live data source reports "${txt(primary.name)}". This is often outdated, so confirm with the destination's official immigration site before deciding not to travel.`);
     if (exception && txt(exception.full_text)) notes.push(txt(exception.full_text));
     if (secondary && txt(secondary.name)) notes.push(`Also possible: ${txt(secondary.name)}${txt(secondary.duration) ? ` (${txt(secondary.duration)})` : ""}.`);
 
@@ -86,7 +91,7 @@
       case "evisa": return `Apply online for ${name || "an eVisa"} before you travel.`;
       case "visa": return `You need ${name || "a visa"} before you travel to ${where}.`;
       case "banned": return `Entry to ${where} is currently restricted for this passport.`;
-      default: return `We couldn't read a clear answer. Check the official links.`;
+      default: return `The live data for ${where} isn't clear enough to rely on. Check the official immigration site or embassy before you book.`;
     }
   }
 

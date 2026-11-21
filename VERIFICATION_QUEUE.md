@@ -6,6 +6,7 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 
 ## Batch 1
 
+- [ ] BH Bahrain  (moved up: user-reported wrong live data)
 - [ ] IN India
 - [ ] TH Thailand
 - [ ] IE Ireland
@@ -15,10 +16,10 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 - [ ] KR South Korea
 - [ ] CN China
 - [ ] SA Saudi Arabia
-- [ ] BR Brazil
 
 ## Batch 2
 
+- [ ] BR Brazil
 - [ ] AT Austria
 - [ ] BE Belgium
 - [ ] CZ Czechia
@@ -28,10 +29,10 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 - [ ] DK Denmark
 - [ ] SE Sweden
 - [ ] NO Norway
-- [ ] FI Finland
 
 ## Batch 3
 
+- [ ] FI Finland
 - [ ] IS Iceland
 - [ ] MT Malta
 - [ ] LU Luxembourg
@@ -41,10 +42,10 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 - [ ] LV Latvia
 - [ ] LT Lithuania
 - [ ] RO Romania
-- [ ] BG Bulgaria
 
 ## Batch 4
 
+- [ ] BG Bulgaria
 - [ ] LI Liechtenstein
 - [ ] VN Vietnam
 - [ ] ID Indonesia
@@ -54,10 +55,10 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 - [ ] MA Morocco
 - [ ] ZA South Africa
 - [ ] QA Qatar
-- [ ] IL Israel
 
 ## Batch 5
 
+- [ ] IL Israel
 - [ ] AR Argentina
 - [ ] CO Colombia
 - [ ] PE Peru
@@ -67,10 +68,10 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 - [ ] JM Jamaica
 - [ ] CU Cuba
 - [ ] KE Kenya
-- [ ] TZ Tanzania
 
 ## Batch 6
 
+- [ ] TZ Tanzania
 - [ ] LK Sri Lanka
 - [ ] MV Maldives
 - [ ] NP Nepal
@@ -80,7 +81,6 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 - [ ] MO Macao SAR
 - [ ] JO Jordan
 - [ ] OM Oman
-- [ ] BH Bahrain
 
 ## Batch 7
 
