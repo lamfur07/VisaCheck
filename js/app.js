@@ -55,7 +55,7 @@
         });
       active = Math.min(active, Math.max(opts.length - 1, 0));
       list.innerHTML = opts.length
-        ? opts.map(([c, n], i) => `<li role="option" id="${list.id}-${c}" data-code="${c}" aria-selected="${i === active}"><span aria-hidden="true">${flag(c)}</span>${esc(n)}${badge && badge(c) ? `<span class="vbadge">${badge(c)}</span>` : ""}</li>`).join("")
+        ? opts.map(([c, n], i) => `<li role="option" id="${list.id}-${c}" data-code="${c}" aria-selected="${i === active}"><span aria-hidden="true">${flag(c)}</span>${esc(n)}${badge && badge(c) ? `<span class="vbadge${badge(c) === "Verified" ? "" : " live"}">${badge(c)}</span>` : ""}</li>`).join("")
         : `<li class="empty" role="option" aria-disabled="true">No country matches “${esc(input.value)}”</li>`;
       list.hidden = false;
       input.setAttribute("aria-expanded", "true");
@@ -110,7 +110,7 @@
   makePicker({
     input: destInput, list: $("#destList"), wrap: $("#destPicker"),
     source: () => window.COUNTRIES,
-    badge: (c) => (VERIFIED.has(c) ? "Verified" : ""),
+    badge: (c) => (VERIFIED.has(c) ? "Verified" : "Live data"),
     onPick: (c) => { setDest(c); clearError(); }
   });
   function setDest(c) {
@@ -202,7 +202,7 @@
     }
     if (VERIFIED.has(dest)) {
       const res = evaluateTrip({ nationalities: state.nats, destination: dest, purpose: state.purpose, docs: [...state.docs] });
-      return { destName: res.dest.name, destFlag: res.dest.flag, verified: true, best: res.best, perPassport: res.perPassport, links: res.dest.links };
+      return { destName: res.dest.name, destFlag: res.dest.flag, verified: true, verifiedOn: res.dest.verified || LAST_VERIFIED, best: res.best, perPassport: res.perPassport, links: res.dest.links };
     }
     return evaluateViaApi(dest);
   }
@@ -278,7 +278,7 @@
   }
 
   function render(res) {
-    const { best, perPassport, destName, destFlag, verified } = res;
+    const { best, perPassport, destName, destFlag, verified, verifiedOn } = res;
     const tone = best.meta.tone;
     const purposeLabel = PURPOSES.find(([id]) => id === state.purpose)[2];
     const multi = perPassport.length > 1;
@@ -302,7 +302,7 @@
       ${facts.length ? `<div class="facts">${facts.map(([k, v]) => `<div class="fact"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join("")}</div>` : ""}
       <div class="cta-row">
         ${applyUrl ? `<a class="apply no-print" href="${esc(applyUrl)}" target="_blank" rel="noopener">Apply on the official site ↗</a>` : ""}
-        <span class="source">${verified ? "✓ Verified rules · " + esc(LAST_VERIFIED) : "Live data · confirm with the embassy"}</span>
+        <span class="source">${verified ? "✓ Verified rules · " + esc(verifiedOn || LAST_VERIFIED) : "Live data · confirm with the embassy"}</span>
       </div>
       ${(best.warn || []).map((w) => `<div class="alert warn"><span aria-hidden="true">⚠️</span><span>${esc(w)}</span></div>`).join("")}
       ${(best.notes || []).map((n) => `<div class="alert note"><span aria-hidden="true">💡</span><span>${esc(n)}</span></div>`).join("")}
