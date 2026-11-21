@@ -49,6 +49,10 @@ t("study becomes permit", study.status === "permit" && study.auth === null);
 const free = normalize({ data: { visa_rules: { primary_rule: { name: "Visa free", duration: "90 days", color: "green" } } } });
 t("visa free has no photo/forms", free.status === "free" && !free.checklist.some((i) => /photo|Apply/.test(i.t)));
 
+const restricted = normalize({ data: { visa_rules: { primary_rule: { name: "Admission refused", color: "red" } } } }, { destName: "Bahrain" });
+t("API 'refused' never shows as banned", restricted.status === "check");
+t("API 'refused' explained in a note", restricted.notes.some((n) => n.includes("Admission refused")));
+
 // Hostile / empty payloads must not throw.
 for (const bad of [null, undefined, {}, { data: null }, { data: { visa_rules: null } }, "oops", 42, { data: { visa_rules: { primary_rule: { name: 123 } } } }]) {
   let ok = true;
