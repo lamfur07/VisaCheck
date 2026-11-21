@@ -8,3 +8,8 @@ compatibility_date = "2026-11-01"
 ALLOWED_ORIGINS = "https://lamfur07.github.io,http://localhost:8000"
 
 # The RapidAPI key is NOT stored here. Run:  wrangler secret put RAPIDAPI_KEY
+
+# Settings for Cloudflare preview builds (non-production branches).
+# Previews only accept local testing, never your live site, so a preview can't spend the production quota.
+[previews.vars]
+ALLOWED_ORIGINS = "http://localhost:8000"
