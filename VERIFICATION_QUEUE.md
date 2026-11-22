@@ -6,16 +6,16 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 
 ## Batch 1
 
-- [ ] BH Bahrain  (moved up: user-reported wrong live data)
-- [ ] IN India
-- [ ] TH Thailand
-- [ ] IE Ireland
-- [ ] NZ New Zealand
-- [ ] TR Türkiye
-- [ ] SG Singapore
-- [ ] KR South Korea
-- [ ] CN China
-- [ ] SA Saudi Arabia
+- [x] BH Bahrain (2026-11-21)
+- [x] IN India (2026-11-21)
+- [x] TH Thailand (2026-11-21)
+- [x] IE Ireland (2026-11-21)
+- [x] NZ New Zealand (2026-11-21)
+- [x] TR Türkiye (2026-11-21)
+- [x] SG Singapore (2026-11-21)
+- [x] KR South Korea (2026-11-21)
+- [x] CN China (2026-11-21)
+- [x] SA Saudi Arabia (2026-11-21)
 
 ## Batch 2
 
