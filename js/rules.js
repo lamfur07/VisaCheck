@@ -346,9 +346,13 @@
   const SCH_BIOMETRIC = S("AL BA MK GE MD ME RS UA");
   const SCH_ATV = S("AF BD CD ER ET GH IR IQ NG PK SO LK");
 
-  function schengen(id, name, flag, portal, longStay) {
+  // opts (added in batch 2): verified date, atvExtra (Set of extra national airport-transit-visa
+  // nationalities, or null when the national list couldn't be confirmed), atvNotes, reg (arrival registration note).
+  function schengen(id, name, flag, portal, longStay, opts = {}) {
+    const atvExtra = opts.atvExtra === undefined ? S("") : opts.atvExtra;
+    const reg = opts.reg ? [opts.reg] : [];
     return {
-      id, name, flag, schengen: true, verified: "2026-11-20",
+      id, name, flag, schengen: true, verified: opts.verified || "2026-11-20",
       links: [
         [`${name}: official visa site`, portal],
         ["EU short-stay visa rules", "https://home-affairs.ec.europa.eu/policies/schengen/visa-policy_en"],
@@ -372,17 +376,24 @@
             summary: p === "transit" ? "No visa needed to transit." : "No visa needed for short stays. Your fingerprints and photo are recorded at the border under the EU Entry/Exit System (EES).",
             checklist: lightChecklist({ purpose: p, passport: "Issued in the last 10 years and valid 3+ months after you leave the Schengen Area." }),
             warn,
-            notes: ["ETIAS is not in operation yet and nothing can be applied for. Ignore sites asking for payment.", "Days spent anywhere in the 29 Schengen countries count towards the 90."]
+            notes: ["ETIAS is not in operation yet and nothing can be applied for. Ignore sites asking for payment.", "Days spent anywhere in the 29 Schengen countries count towards the 90.", ...(p === "transit" ? [] : reg)]
           };
         }
         if (p === "transit") {
           const atvExempt = has(ctx, "visa:US", "visa:CA", "visa:JP", "pr:US", "pr:CA", "pr:JP", "pr:EU");
-          if (SCH_ATV.has(nat) && !atvExempt) return {
+          const national = atvExtra && atvExtra.has(nat) && !SCH_ATV.has(nat);
+          if ((SCH_ATV.has(nat) || national) && !atvExempt) return {
             status: "visa",
             auth: { name: "Airport transit visa (Type A)", fee: "€90", time: "Apply at least 15 days ahead", url: portal },
-            summary: "Your nationality needs an airport transit visa even to change planes, unless you hold a valid US, Canada or Japan visa or residence, or an EU/EEA residence permit.",
+            summary: (national ? `${name} requires an airport transit visa for your nationality (a national rule on top of the EU list)` : "Your nationality needs an airport transit visa even to change planes") + ", unless you hold a valid US, Canada or Japan visa or residence, or an EU/EEA residence permit.",
             checklist: [common.passport(), item("Onward ticket and visa for final destination", ""), common.photo()],
-            notes: ["Some Schengen states add extra nationalities to this list. Check the airport's country."]
+            notes: ["Some Schengen states add extra nationalities to this list. Check the airport's country.", ...(opts.atvNotes || [])]
+          };
+          if (atvExtra === null && !atvExempt) return {
+            status: "check",
+            summary: `You don't need an airport transit visa under the EU-wide list, but we couldn't confirm ${name}'s own extra airport transit visa list on an official page. Check before you fly. Leaving the airport needs a short-stay visa.`,
+            checklist: [common.passport(), item("Onward boarding pass", "Stay in the international transit area.")],
+            links: [["EU airport transit visa lists (Annex 7B)", "https://home-affairs.ec.europa.eu/policies/schengen/visa-policy_en"], [`${name}: official visa site`, portal]]
           };
           return { status: "free", summary: "You can change planes airside without a Schengen visa. Leaving the airport needs a short-stay visa.", checklist: [common.passport(), item("Onward boarding pass", "Stay in the international transit area.")], notes: ["Some Schengen states require airport transit visas for extra nationalities. Check the transit country's site."] };
         }
@@ -395,7 +406,7 @@
             form: item("Schengen visa application form", "Signed. Many countries use an online form.", portal),
             insurance: "Mandatory: at least €30,000 medical cover valid in all Schengen countries.",
             extra: [item("Biometrics appointment", "Fingerprints at the consulate or visa centre (reused for 5 years)."), item("Day-by-day itinerary", "Especially if visiting several countries.")] }),
-          notes: ["One Schengen visa covers all 29 Schengen countries."]
+          notes: ["One Schengen visa covers all 29 Schengen countries.", ...reg]
         };
       }
     };
@@ -423,6 +434,56 @@
   const PT = schengen("PT", "Portugal", "🇵🇹", "https://vistos.mne.gov.pt/en/");
   const GR = schengen("GR", "Greece", "🇬🇷", "https://www.mfa.gr/en/visas/");
   const CH = schengen("CH", "Switzerland", "🇨🇭", "https://www.sem.admin.ch/sem/en/home/themen/einreise.html");
+
+  // ---------- Batch 2 Schengen states (checked 2026-11-22) ----------
+  // Shared EU rules re-confirmed 2026-11-22:
+  //  https://home-affairs.ec.europa.eu/policies/schengen/smart-borders/european-travel-information-authorisation-system_en (ETIAS not in operation)
+  //  https://www.eulisa.europa.eu/news-and-events/news/entryexit-system-fully-deployed-across-eu (EES fully deployed 10 Apr 2026)
+  //  https://home-affairs.ec.europa.eu/policies/schengen/visa-policy/applying-schengen-visa_en (fee €90)
+  //  https://eur-lex.europa.eu/eli/reg_impl/2026/496/oj/eng (Georgia: only diplomatic/service passports suspended)
+  // National airport transit visa (ATV) lists: atvExtra = null where the national list couldn't be confirmed officially.
+  const B2 = "2026-11-22";
+
+  // Austria: https://www.oesterreich.gv.at/en/themen/menschen_aus_anderen_staaten/visum_fuer_oesterreich/Seite.3550020
+  //  https://www.migration.gv.at/en/types-of-immigration/ ; registration: https://www.oesterreich.gv.at/themen/bauen_und_wohnen/umzug/2/1/Seite.180657.html
+  //  National ATV list not readable (bmeia.gv.at / bmi.gv.at blocked) -> transit "check".
+  const AT = schengen("AT", "Austria", "🇦🇹", "https://www.bmeia.gv.at/en/travel-stay/entrance-and-residence-in-austria/visa", "https://www.migration.gv.at/en/types-of-immigration/",
+    { verified: B2, atvExtra: null, reg: "Austria: hotels register you. If you stay in a private home, registration with the local registration office (Meldebehörde) is due within 3 days." });
+  // Belgium: https://dofi.ibz.be/en/themes/entry/border-control/visa ; registration: https://indonesia.diplomatie.belgium.be/en/travel-belgium/visa-belgium/obligation-register-belgium
+  //  National ATV extras not confirmed (dofi.ibz.be captcha) -> transit "check".
+  const BE = schengen("BE", "Belgium", "🇧🇪", "https://dofi.ibz.be/en/themes/entry/border-control/visa", "https://dofi.ibz.be/en/themes/third-country-nationals/short-stay",
+    { verified: B2, atvExtra: null, reg: "Belgium: if you don't stay in a hotel, register with the local municipality within 3 working days of arrival." });
+  // Czechia: https://mzv.gov.cz/jnp/en/information_for_aliens/short_stay_visa/airport_visa.htm (ATV list, page dated 22.11.2022)
+  //  https://mzv.gov.cz/jnp/en/information_for_aliens/long_stay_visa/index.html ; registration: https://mzv.gov.cz/riyadh/en/visas_and_consular_information/visas/reporting_duty_of_foreigners.html
+  const CZ = schengen("CZ", "Czechia", "🇨🇿", "https://mzv.gov.cz/jnp/en/information_for_aliens/short_stay_visa/x90_180_rule/index.html", "https://mzv.gov.cz/jnp/en/information_for_aliens/long_stay_visa/index.html",
+    { verified: B2, atvExtra: S("DZ AM TD CU EG IN LB LY ML MR NE PS RU SS SD SY TR YE"),
+      atvNotes: ["For Russian citizens the Czech requirement applies only on flights from certain airports (e.g. in Armenia, Azerbaijan, Georgia, Türkiye, Egypt)."],
+      reg: "Czechia: if you don't stay in a hotel or hostel, report to the foreign police within 3 working days of arrival." });
+  // Poland: https://www.gov.pl/web/diplomacy/visas (ATV list: common list + AM, EG, CU) ; https://www.gov.pl/web/udsc-en/visas
+  //  registration: https://www.gov.pl/web/gov/zamelduj-sie-na-pobyt-staly-dla-cudzoziemcow-en
+  const PL = schengen("PL", "Poland", "🇵🇱", "https://www.gov.pl/web/diplomacy/visas", "https://www.gov.pl/web/udsc-en/visas",
+    { verified: B2, atvExtra: S("AM EG CU"), reg: "Poland: stays over 30 days must be registered at the municipal office by the 4th day after arrival." });
+  // Hungary: https://konzinfo.mfa.gov.hu/en/short-term-stay (ATV: common list only) ; https://oif.gov.hu/factsheets/residence-permit-for-the-purpose-of-employment
+  //  registration: https://oif.gov.hu/factsheets/information-notice-for-persons-entitled-to-a-visa-free-stay
+  const HU = schengen("HU", "Hungary", "🇭🇺", "https://konzinfo.mfa.gov.hu/en/short-term-stay", "https://oif.gov.hu/factsheets/residence-permit-for-the-purpose-of-employment",
+    { verified: B2, reg: "Hungary: stays over 30 days need your accommodation reported to the immigration authority (Enter Hungary)." });
+  // Croatia: https://mvep.gov.hr/services-for-citizens/consular-information-22802/visas-22807/issuance-procedure/applying-for-a-schengen-visa-for-croatia/262010
+  //  https://mup.gov.hr/aliens-281621/stay-and-work/temporary-stay-of-third-country-nationals/281661 ; registration: https://mvep.gov.hr/page/161369
+  //  National ATV list not confirmed -> transit "check".
+  const HR = schengen("HR", "Croatia", "🇭🇷", "https://mvep.gov.hr/services-for-citizens/consular-information-22802/visas-22807/issuance-procedure/applying-for-a-schengen-visa-for-croatia/262010", "https://mup.gov.hr/aliens-281621/stay-and-work/temporary-stay-of-third-country-nationals/281661",
+    { verified: B2, atvExtra: null, reg: "Croatia: your stay must be registered with the police within 2 days of arrival. Hotels and rentals do this for you." });
+  // Denmark: https://nyidanmark.dk/en-GB/You-want-to-apply/Short-stay-visa
+  //  ATV: https://nyidanmark.dk/-/media/Files/US/Visum/Diverse-filer/Overview-of-travel-documents-visa-requirements-and-border-crossing-points130426.pdf (common list + SY, 13 Apr 2026)
+  const DK = schengen("DK", "Denmark", "🇩🇰", "https://nyidanmark.dk/en-GB/You-want-to-apply/Short-stay-visa", "https://www.nyidanmark.dk/en-GB/You-want-to-apply/Work/Fast-track",
+    { verified: B2, atvExtra: S("SY") });
+  // Sweden: https://migrationsverket.se/en/you-want-to-apply/visiting-sweden/visiting-sweden-for-up-to-90-days-entry-visa.html
+  //  https://www.migrationsverket.se/en/you-want-to-apply/work/employee-or-self-employed.html ; national ATV list not confirmed -> transit "check".
+  const SE = schengen("SE", "Sweden", "🇸🇪", "https://migrationsverket.se/en/you-want-to-apply/visiting-sweden/visiting-sweden-for-up-to-90-days-entry-visa.html", "https://www.migrationsverket.se/en/you-want-to-apply/work/employee-or-self-employed.html",
+    { verified: B2, atvExtra: null });
+  // Norway: https://www.udi.no/en/want-to-apply/visit-and-holiday/ ; https://www.udi.no/en/want-to-apply/work-immigration/skilled-workers/
+  //  ATV: https://www.udi.no/en/word-definitions/airport-transit-visa/ (common list + SY, TR)
+  const NO = schengen("NO", "Norway", "🇳🇴", "https://www.udi.no/en/want-to-apply/visit-and-holiday/", "https://www.udi.no/en/want-to-apply/work-immigration/skilled-workers/",
+    { verified: B2, atvExtra: S("SY TR") });
 
   // =====================================================================
   // AUSTRALIA
@@ -1183,8 +1244,85 @@
     }
   };
 
+  // =====================================================================
+  // BRAZIL
+  // Sources (checked 2026-11-22):
+  //  https://cop30.br/pt-br/servicos-da-cop30/visto/2025-04_quadrogeral-regime-de-vistos_pt.pdf/@@download/file (MRE QGRV, 8 Apr 2025)
+  //  https://www2.camara.leg.br/legin/fed/decret/2026/decreto-12864-2-marco-2026-798769-publicacaooriginal-178286-pe.html (Brazil-EU: 90/180 from 1 Mar 2026, not IE)
+  //  https://concordia.itamaraty.gov.br/acordo/13219?TipoAcordo=BL&amp=&tipoPesquisa=2 (China: 30 days, 11 May to 31 Dec 2026)
+  //  https://agenciagov.ebc.com.br/noticias/202504/brasil-comeca-a-exigir-visto-para-cidadaos-dos-eua-canada-e-australia (US/CA/AU eVisa, US$80.90)
+  //  https://planalto.gov.br/ccivil_03/_ato2015-2018/2017/decreto/d9199.htm (90 days, extendable to 180 per year; airside transit)
+  //  https://www.gov.br/saude/pt-br/vacinacao/viajantes (no vaccination proof required to enter)
+  // The newer QGRV (7 Oct 2026) could not be read. Japan's exemption ended 30 Sep 2026 and its extension
+  // could not be confirmed officially, so JP returns "check". Nationalities on neither list return "check".
+  // =====================================================================
+  const BR_ID = S("AR BO CL CO EC PY PE UY VE"); // may enter with national ID card
+  const BR_90_180 = union(S("AL DM GE ME MK SC CH UA"), new Set([...EU].filter((c) => c !== "IE"))); // EU deal excludes Ireland
+  const BR_90 = S("ZA AD AG AM BS BB BY BZ BA BW QA KR CR SV AE FJ PH GD GT GY HN HK IS IL JM LI MO MY MA MX MD MC MN NA NI NO NZ PA GB RU SM LC KN VC RS SR TH TT TN TR VA AR BO CL CO EC PY PE UY IE");
+  const BR_60 = S("DO VE");
+  const BR_30 = S("KZ ID SG CN");
+  const BR_EVISA = S("US CA AU");
+  const BR_VISA = S("AF AO SA DZ AZ BH BD BJ BN BF BI BT CV KH CM TD KM CG CD KP CI CU DJ EG ER ET GA GM GH GN GW GQ HT YE IN IR IQ JO KI KW LA LS LB LR LY MG MW MV ML MH MU MR FM MZ MM NR NP NE NG OM PW PS PG PK KE KG CF RW SB WS ST SN SL SY SO LK SZ SD SS TJ TZ TL TG TO TM TV UG UZ VU VN ZM ZW XK TW");
+  const BR_EV_URL = "https://brazil.vfsevisa.com/";
+  const BR_FORM = "https://formulario-mre.serpro.gov.br";
+
+  const BR = {
+    id: "BR", name: "Brazil", flag: "🇧🇷", verified: "2026-11-22",
+    links: [
+      ["Visa regime table (MRE)", "https://www.gov.br/mre/pt-br/assuntos/portal-consular/vistos"],
+      ["Brazil eVisa (official, US/CA/AU)", BR_EV_URL],
+      ["Get a visa to travel to Brazil (gov.br)", "https://www.gov.br/pt-br/servicos/obter-visto-para-viajar-ao-brasil"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid for your whole stay.";
+      if (nat === "BR") return { status: "citizen", summary: "Travel on your Brazilian passport or ID." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a temporary visa for study (VITEM IV) from a Brazilian consulate. After arrival you register with the Federal Police." : "Paid work needs a temporary work visa (VITEM V), normally after your employer gets authorisation. Visitors may not do paid work.",
+        auth: { name: p === "study" ? "VITEM IV (study)" : "VITEM V (work)", fee: "Set by the consulate", time: "Apply through the consulate for where you live", url: BR_FORM },
+        checklist: [item(p === "study" ? "Enrolment or acceptance letter from a Brazilian institution" : "Employment contract and work authorisation", ""), item("Online visa application form", "", BR_FORM), common.passport(passport), common.photo(), item("Register with the Federal Police after arrival", "")]
+      };
+      if (p === "transit") return {
+        status: "free",
+        summary: "No visa needed to change planes if you stay in the international transit area. Leaving the airport needs whatever visa your nationality needs to visit.",
+        checklist: [common.passport(passport), item("Onward boarding pass", "Stay airside.")],
+        ...(BR_VISA.has(nat) || BR_EVISA.has(nat) ? { warn: ["Since August 2024, travellers who need a visa and arrive in transit without one are not admitted to Brazil and must continue their journey."] } : {})
+      };
+      const freeStay = BR_90_180.has(nat) ? "Up to 90 days in any 180" : BR_90.has(nat) ? "Up to 90 days (extendable to 180 a year)" : BR_60.has(nat) ? "Up to 60 days" : BR_30.has(nat) ? "Up to 30 days" : null;
+      if (freeStay) return {
+        status: "free", stay: freeStay,
+        summary: (nat === "CN" ? "No visa needed for up to 30 days (not extendable) under a temporary arrangement for 11 May to 31 December 2026." : "No visa needed for tourism or business visits.") + (BR_ID.has(nat) ? " You can enter with your national ID card instead of a passport." : ""),
+        checklist: lightChecklist({ purpose: p, passport: BR_ID.has(nat) ? "Passport or national ID card, valid for your stay." : passport }),
+        ...(nat === "CN" ? { warn: ["The visa exemption for Chinese citizens ends on 31 December 2026 unless renewed. Check before booking trips after that date."] } : {}),
+        notes: ["Visitors may not do paid work.", "Yellow fever vaccination is recommended for some regions but not required to enter."]
+      };
+      if (nat === "JP") return {
+        status: "check",
+        summary: "Japan's visa exemption for Brazil ran until 30 September 2026. An extension has been reported, but we couldn't confirm it on an official Brazilian page. Check with the Brazilian consulate before you travel.",
+        checklist: [common.passport(passport)],
+        links: [["Brazilian consulates and visas (MRE)", "https://www.gov.br/mre/pt-br/assuntos/portal-consular/vistos"]]
+      };
+      if (BR_EVISA.has(nat)) return {
+        status: "evisa", stay: "Up to 90 days per visit",
+        auth: { name: "Brazil eVisa (visitor)", fee: "US$80.90", time: "Apply online before travel", url: BR_EV_URL },
+        summary: "Since 10 April 2025 your nationality needs a visitor visa. Apply online for the eVisa before you travel (air, land or sea).",
+        checklist: lightChecklist({ purpose: p, passport, auth: item("Approved eVisa", "US$80.90. Print or save it to show at check-in and the border.", BR_EV_URL), extra: [common.photo("Digital photo for the online form.")] }),
+        notes: ["Only use the official eVisa site linked here. Other sites charge extra."]
+      };
+      if (BR_VISA.has(nat)) return {
+        status: "visa", stay: "Up to 90 days",
+        auth: { name: "Visitor visa (VIVIS)", fee: "Set by the consulate", time: "Apply through the consulate for where you live", url: BR_FORM },
+        summary: "You need a visitor visa (VIVIS) from a Brazilian consulate before you travel. Holding a US, UK or Schengen visa or residence doesn't change this.",
+        checklist: visitorChecklist({ purpose: p, passport, form: item("Online visa application form", "Then submit it to the consulate.", BR_FORM) })
+      };
+      return { status: "check", summary: "We couldn't confirm your nationality on Brazil's official visa table. Check with the Brazilian consulate.", checklist: [common.passport(passport)], links: [["Visa regime table (MRE)", "https://www.gov.br/mre/pt-br/assuntos/portal-consular/vistos"]] };
+    }
+  };
+
   // ---------- Engine ----------
-  const DESTINATIONS = [US, CA, GB, FR, DE, IT, ES, NL, PT, GR, CH, AU, JP, AE, MX, BH, IN, TH, IE, NZ, TR, SG, KR, CN, SA];
+  const DESTINATIONS = [US, CA, GB, FR, DE, IT, ES, NL, PT, GR, CH, AU, JP, AE, MX, BH, IN, TH, IE, NZ, TR, SG, KR, CN, SA,
+    BR, AT, BE, CZ, PL, HU, HR, DK, SE, NO];
 
   function evaluateTrip({ nationalities, destination, purpose, docs }) {
     const dest = DESTINATIONS.find((d) => d.id === destination);

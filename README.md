@@ -21,7 +21,7 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
-Without a proxy configured, the 15 verified destinations work fully and other countries show an honest "check the official source" result.
+Without a proxy configured, the verified destinations work fully and other countries show an honest "check the official source" result.
 
 ## Enable all countries (API proxy)
 
