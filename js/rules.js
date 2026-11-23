@@ -346,6 +346,8 @@
   const SCH_BIOMETRIC = S("AL BA MK GE MD ME RS UA");
   const SCH_ATV = S("AF BD CD ER ET GH IR IQ NG PK SO LK");
 
+  // opts (batch 3 additions): natRule(nat, ctx) returns a full result overriding the default for tourism/business
+  // (used for national entry restrictions), natWarn(nat, purpose) returns extra warnings for visit results.
   // opts (added in batch 2): verified date, atvExtra (Set of extra national airport-transit-visa
   // nationalities, or null when the national list couldn't be confirmed), atvNotes, reg (arrival registration note).
   function schengen(id, name, flag, portal, longStay, opts = {}) {
@@ -365,9 +367,12 @@
         if (EEA_CH.has(nat)) return { status: "free", summary: "EU/EEA/Swiss free movement: you can visit, study and work without a visa.", checklist: [item("Passport or national ID card", "Valid for your stay."), ...(p === "work" || p === "study" ? [item("Register locally if staying over 3 months", "Rules vary by country and city.")] : [])] };
         if (p === "study" || p === "work") return schLong(name, portal, longStay, p);
         if (has(ctx, "pr:EU")) return { status: "resident", stay: "90 days in any 180", summary: "A residence permit from a Schengen country lets you travel to other Schengen countries for up to 90 days in any 180 without a visa.", checklist: [item("Valid Schengen residence permit", "Permits from Ireland and Cyprus don't count."), common.passport()], warn: ["Not valid for working in another Schengen country."] };
+        if (opts.natRule && p !== "transit") { const r = opts.natRule(nat, ctx); if (r) return r; }
+        const natWarn = opts.natWarn ? opts.natWarn(nat, p) || [] : [];
         if (has(ctx, "visa:SCHENGEN")) return { status: "resident", stay: "As shown on your visa", summary: "Use your valid Schengen visa. Check its dates, entries and days allowed.", checklist: [item("Valid Schengen visa", "Count your days: 90 in any 180.")] };
         if (SCH_EXEMPT.has(nat)) {
           const warn = SCH_BIOMETRIC.has(nat) ? ["Visa-free travel only applies to biometric passports."] : [];
+          if (p !== "transit") warn.push(...natWarn);
           if (nat === "HK") warn.push("Hong Kong SAR passport required.");
           if (nat === "MO") warn.push("Macao SAR passport required.");
           if (nat === "TW") warn.push("Taiwan passport must include your ID card number.");
@@ -401,6 +406,7 @@
           status: "visa", stay: "Up to 90 days in any 180",
           auth: { name: "Schengen short-stay visa (Type C)", fee: "€90 (children 6 to 11: €45)", time: "Usually 15 days; apply up to 6 months before", url: portal },
           summary: `You need a Schengen visa. Apply to ${name} if it's your main destination (longest stay) or first entry if stays are equal.`,
+          ...(natWarn.length ? { warn: natWarn } : {}),
           checklist: visitorChecklist({ purpose: p,
             passport: "Issued in the last 10 years, valid 3+ months after you leave, with 2 blank pages.",
             form: item("Schengen visa application form", "Signed. Many countries use an online form.", portal),
@@ -412,6 +418,7 @@
     };
   }
   function schLong(name, portal, longStay, p) {
+    if (longStay && typeof longStay === "object") longStay = longStay[p]; // batch 3: separate study/work pages
     return {
       status: "permit",
       summary: `${p === "study" ? "Study" : "Work"} longer than 90 days needs a national long-stay (Type D) visa or residence permit from ${name}.`,
@@ -484,6 +491,92 @@
   //  ATV: https://www.udi.no/en/word-definitions/airport-transit-visa/ (common list + SY, TR)
   const NO = schengen("NO", "Norway", "🇳🇴", "https://www.udi.no/en/want-to-apply/visit-and-holiday/", "https://www.udi.no/en/want-to-apply/work-immigration/skilled-workers/",
     { verified: B2, atvExtra: S("SY TR") });
+
+  // ---------- Batch 3 Schengen states (checked 2026-11-23) ----------
+  // Shared EU rules as in batch 2. Romania: full Schengen member since 1 Jan 2025
+  //  https://www.consilium.europa.eu/en/press/press-releases/2024/12/12/schengen-council-decides-to-lift-land-border-controls-with-bulgaria-and-romania/
+  const B3 = "2026-11-23";
+  const RU_NONBIO = "Russian passports without a chip (non-biometric) are not accepted for entry.";
+
+  // Finland: https://um.fi/visa-to-visit-finland (ATV: common list only, also AIP Finland GEN 1.3 2.1.6, 27 Nov 2025:
+  //  https://www.ais.fi/eaip/006-2025_2025_11_27/eAIP/EF-GEN%201.3-en-GB.html) ; https://migri.fi/en/studies ; https://migri.fi/en/work-based-residence-permits
+  const FI = schengen("FI", "Finland", "🇫🇮", "https://um.fi/visa-to-visit-finland",
+    { study: "https://migri.fi/en/studies", work: "https://migri.fi/en/work-based-residence-permits" },
+    { verified: B3 });
+  // Iceland: https://island.is/en/get-a-visa ; ATV (common list only): https://island.is/en/do-you-need-a-visa/airport-transit-visa
+  //  https://island.is/en/residence-permit-students/requirements ; https://island.is/en/permit-based-on-work/rights
+  const IS = schengen("IS", "Iceland", "🇮🇸", "https://island.is/en/get-a-visa",
+    { study: "https://island.is/en/residence-permit-students/requirements", work: "https://island.is/en/permit-based-on-work/rights" },
+    { verified: B3 });
+  // Malta: https://identita.gov.mt/central-visa-unit-sec-page-schengen-visa/ (modified 3 Sep 2025) ; https://www.identita.gov.mt/single-permit/
+  //  https://identita.gov.mt/central-visa-unit-student-visa-courses-exceeding-90-days/ ; national ATV list not found officially -> transit "check".
+  const MT = schengen("MT", "Malta", "🇲🇹", "https://identita.gov.mt/central-visa-unit-sec-page-schengen-visa/",
+    { study: "https://identita.gov.mt/central-visa-unit-student-visa-courses-exceeding-90-days/", work: "https://www.identita.gov.mt/single-permit/" },
+    { verified: B3, atvExtra: null });
+  // Luxembourg: https://guichet.public.lu/en/citoyens/immigration/moins-3-mois/ressortissant-tiers/entree-visa.html
+  //  https://guichet.public.lu/en/citoyens/immigration/plus-3-mois/ressortissant-tiers/demarches-communes/entree-visa.html
+  //  ATV national list (common list + AO GN GW NP SD SY SS): https://ankara.mae.lu/en/service_citoyens/visa-types.html (updated 08.10.2025)
+  //  registration: https://guichet.public.lu/en/citoyens/immigration/moins-3-mois/ressortissant-tiers/sejour.html
+  const LU = schengen("LU", "Luxembourg", "🇱🇺", "https://guichet.public.lu/en/citoyens/immigration/moins-3-mois/ressortissant-tiers/entree-visa.html", "https://guichet.public.lu/en/citoyens/immigration/plus-3-mois/ressortissant-tiers/demarches-communes/entree-visa.html",
+    { verified: B3, atvExtra: S("AO GN GW NP SD SY SS"), reg: "Luxembourg: declare your arrival at the local commune within 3 days. Filling in the hotel registration form counts as your declaration." });
+  // Slovenia: https://www.gov.si/en/topics/entry-and-residence/ ; ATV common list only: https://www.gov.si/en/representations/embassy-addis-ababa/visa-information/
+  //  https://infotujci.si/en/third-country-nationals/temporary-residence-permit/ ; registration: https://infotujci.si/en/third-country-nationals/temporary-residence-permit/registration-of-residence
+  const SI = schengen("SI", "Slovenia", "🇸🇮", "https://www.gov.si/en/topics/entry-and-residence/", "https://infotujci.si/en/third-country-nationals/temporary-residence-permit/",
+    { verified: B3, reg: "Slovenia: register with the nearest police station within 3 days of entry. Hotels and other accommodation providers do this for you." });
+  // Slovakia: https://www.mzv.sk/sk/web/washington-en/services/schengen-visa ; https://www.mzv.sk/web/rim-en/services/residence
+  //  registration: Act 404/2011 s.111(2)(a), s.113 https://static.slov-lex.sk/pdf/SK/ZZ/2011/404/ZZ_2011_404_20260715.pdf
+  //  National ATV list not confirmed -> transit "check".
+  const SK = schengen("SK", "Slovakia", "🇸🇰", "https://www.mzv.sk/sk/web/washington-en/services/schengen-visa", "https://www.mzv.sk/web/rim-en/services/residence",
+    { verified: B3, atvExtra: null, reg: "Slovakia: report your stay to the foreign police within 3 working days of entry, unless your hotel or other accommodation provider reports it for you." });
+  // Estonia: https://www.vm.ee/en/consular-visa-and-travel-information/visa-information/application-schengen-visa
+  //  ATV common list only: https://eaip.eans.ee/2026-05-14/html/eAIP/EE-GEN-1.3-en-GB.html ; https://www.politsei.ee/en/instructions/applying-for-a-residence-permit
+  //  Russian citizens: Government Order No. 247 (current version from 25 Jan 2026) https://www.riigiteataja.ee/public-api/api/v1/en/akt/529012026002/blob-html
+  const EE = schengen("EE", "Estonia", "🇪🇪", "https://www.vm.ee/en/consular-visa-and-travel-information/visa-information/application-schengen-visa", "https://www.politsei.ee/en/instructions/applying-for-a-residence-permit",
+    { verified: B3,
+      natRule: (nat) => nat === "RU" ? { status: "banned",
+        summary: "Russian citizens holding a Schengen short-stay visa (from any country) are not allowed to enter Estonia across the external border, apart from listed exceptions.",
+        checklist: [common.passport()],
+        notes: ["Exceptions include close family of Estonian citizens or residents, people with EU free-movement rights, diplomats, transport crew, humanitarian cases, and holders of an Estonian visa for registered work or study."],
+        links: [["Visas for Russian citizens (kriis.ee)", "https://www.kriis.ee/en/travelling-crossing-state-border/travelling-estonia/visas-russian-citizens"]] } : null });
+  // Latvia: https://pmlp.gov.lv/en/visas-and-invitations ; https://www.pmlp.gov.lv/en/residence-permit
+  //  ATV common list only: https://www.pmlp.gov.lv/en/airport-transit
+  //  Entry declaration (from 1 Sep 2025): https://www.mfa.gov.lv/en/article/procedures-entry-latvia-1-september-2025 , https://eta.gov.lv
+  //  Russian citizens: https://www.mfa.gov.lv/en/entry-latvia-citizens-russian-federation-and-frequently-asked-questions (updated 20.11.2026)
+  //  https://mfa.gov.lv/en/questions-and-answers-non-recognition-russian-federation-non-biometric-passports-republic-latvia
+  const LV_DECL_EXEMPT = union(EEA_CH, S("AD BR MC SM VA US CA GB TR AL ME MK AU CL CO CR IL JP KR MX NZ"));
+  const LV = schengen("LV", "Latvia", "🇱🇻", "https://pmlp.gov.lv/en/visas-and-invitations", "https://www.pmlp.gov.lv/en/residence-permit",
+    { verified: B3,
+      natRule: (nat) => nat === "RU" ? { status: "banned",
+        summary: "Russian citizens can't enter Latvia for tourism or business visits, or to transit to another EU country, even with a Schengen visa.",
+        checklist: [common.passport()],
+        warn: [RU_NONBIO],
+        notes: ["Exceptions include holders of an EU/EEA/Swiss residence permit or a Schengen D visa, family members of Latvian, EU, EEA or Swiss citizens, humanitarian cases, transport crew and diplomats."],
+        links: [["Entry for Russian citizens (MFA Latvia)", "https://www.mfa.gov.lv/en/entry-latvia-citizens-russian-federation-and-frequently-asked-questions"]] } : null,
+      natWarn: (nat) => LV_DECL_EXEMPT.has(nat) ? [] : ["Latvia: unless your nationality is on the exempt list, submit an entry declaration at eta.gov.lv at least 48 hours before you arrive. It isn't a visa."] });
+  // Lithuania: https://cn.mfa.lt/en/travel-and-residence/coming-to-lithuania/visas/90 ; https://migracija.lrv.lt/en/activities/residence-permits-of-the-republic-of-lithuania/
+  //  National ATV list not confirmed -> transit "check".
+  //  Russian citizens: https://ru.mfa.lt/en/travel-and-residence/coming-to-lithuania/entry-of-foreigners-into-lithuania/133
+  //  Belarus visa applications: https://keliauk.urm.lt/en/incoming/baltarusija ; RU non-biometric passports:
+  //  https://www.urm.lt/en/news/928/from-1-june-lithuania-will-no-longer-recognize-non-biometric-passports-issued-by-russia:44207
+  const LT = schengen("LT", "Lithuania", "🇱🇹", "https://cn.mfa.lt/en/travel-and-residence/coming-to-lithuania/visas/90", "https://migracija.lrv.lt/en/activities/residence-permits-of-the-republic-of-lithuania/",
+    { verified: B3, atvExtra: null,
+      natRule: (nat) => nat === "RU" ? { status: "banned",
+        summary: "Russian citizens with a Schengen visa are admitted to Lithuania only in listed categories. Tourist and business visits don't qualify.",
+        checklist: [common.passport()],
+        warn: [RU_NONBIO],
+        notes: ["Admitted categories include holders of an EU/EEA/Swiss residence permit or a Schengen D visa, family members of Lithuanian, EU, EEA or Swiss citizens, transport crew, diplomats, humanitarian cases and Kaliningrad rail transit."],
+        links: [["Entry of foreigners into Lithuania (MFA)", "https://ru.mfa.lt/en/travel-and-residence/coming-to-lithuania/entry-of-foreigners-into-lithuania/133"]] } : null,
+      natWarn: (nat) => nat === "BY" ? ["Since 3 May 2023 Lithuanian embassies don't accept visa applications from Belarusian citizens, except close family of Lithuanian or EU citizens, holders of a Lithuanian-origin certificate, and urgent humanitarian cases."] : [] });
+  // Romania: https://eviza.mae.ro/ (official MFA eVisa portal) ; https://eviza.mae.ro/ShortStayVisa (ATV list: common + EG IN LB MA NP SY TJ TN UZ YE;
+  //  IGI-endorsed invitation list) ; https://igi.mai.gov.ro/en/studies/ ; https://igi.mai.gov.ro/en/single-permit/
+  const RO_INVITE = S("AF DZ AO BD BI CM CF TD KM CI KP CD DJ EG ER GA GN GW HT IN ID IR IQ JO KG LB LR LY ML MR MA NG PK RU SO LK SD SS SY TN UZ YE PS");
+  const RO = schengen("RO", "Romania", "🇷🇴", "https://eviza.mae.ro/",
+    { study: "https://igi.mai.gov.ro/en/studies/", work: "https://igi.mai.gov.ro/en/single-permit/" },
+    { verified: B3, atvExtra: S("EG IN LB MA NP SY TJ TN UZ YE"),
+      natWarn: (nat) => [
+        ...(RO_INVITE.has(nat) ? ["Romania: to apply for a visa your nationality needs an invitation approved by the General Inspectorate for Immigration (IGI)."] : []),
+        ...(S("AF MG PK YE").has(nat) ? ["Romania: polio vaccination is mandatory for travellers coming from Afghanistan, Madagascar, Pakistan or Yemen."] : [])
+      ] });
 
   // =====================================================================
   // AUSTRALIA
@@ -1322,7 +1415,8 @@
 
   // ---------- Engine ----------
   const DESTINATIONS = [US, CA, GB, FR, DE, IT, ES, NL, PT, GR, CH, AU, JP, AE, MX, BH, IN, TH, IE, NZ, TR, SG, KR, CN, SA,
-    BR, AT, BE, CZ, PL, HU, HR, DK, SE, NO];
+    BR, AT, BE, CZ, PL, HU, HR, DK, SE, NO,
+    FI, IS, MT, LU, SI, SK, EE, LV, LT, RO];
 
   function evaluateTrip({ nationalities, destination, purpose, docs }) {
     const dest = DESTINATIONS.find((d) => d.id === destination);
