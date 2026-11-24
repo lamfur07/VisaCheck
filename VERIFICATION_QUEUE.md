@@ -19,16 +19,16 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 
 ## Batch 2
 
-- [ ] BR Brazil
-- [ ] AT Austria
-- [ ] BE Belgium
-- [ ] CZ Czechia
-- [ ] PL Poland
-- [ ] HU Hungary
-- [ ] HR Croatia
-- [ ] DK Denmark
-- [ ] SE Sweden
-- [ ] NO Norway
+- [x] BR Brazil (2026-11-22)
+- [x] AT Austria (2026-11-22)
+- [x] BE Belgium (2026-11-22)
+- [x] CZ Czechia (2026-11-22)
+- [x] PL Poland (2026-11-22)
+- [x] HU Hungary (2026-11-22)
+- [x] HR Croatia (2026-11-22)
+- [x] DK Denmark (2026-11-22)
+- [x] SE Sweden (2026-11-22)
+- [x] NO Norway (2026-11-22)
 
 ## Batch 3
 
