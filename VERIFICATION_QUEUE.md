@@ -32,16 +32,16 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 
 ## Batch 3
 
-- [ ] FI Finland
-- [ ] IS Iceland
-- [ ] MT Malta
-- [ ] LU Luxembourg
-- [ ] SI Slovenia
-- [ ] SK Slovakia
-- [ ] EE Estonia
-- [ ] LV Latvia
-- [ ] LT Lithuania
-- [ ] RO Romania
+- [x] FI Finland (2026-11-23)
+- [x] IS Iceland (2026-11-23)
+- [x] MT Malta (2026-11-23)
+- [x] LU Luxembourg (2026-11-23)
+- [x] SI Slovenia (2026-11-23)
+- [x] SK Slovakia (2026-11-23)
+- [x] EE Estonia (2026-11-23)
+- [x] LV Latvia (2026-11-23)
+- [x] LT Lithuania (2026-11-23)
+- [x] RO Romania (2026-11-23)
 
 ## Batch 4
 
