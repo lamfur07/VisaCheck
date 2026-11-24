@@ -102,6 +102,14 @@ with sync_playwright() as p:
     pg = page(); with_proxy(pg, "ok"); pg.goto(BASE + "#n=IN&d=US&p=tourism&doc=pr:US"); pg.wait_for_timeout(800)
     check("live check: skipped for residence-based result", pg.locator("#liveCheck").count() == 0)
 
+    # 6c. Verified destination that can't confirm a case falls back to a clear live answer
+    pg = page(); with_proxy(pg, "ok"); pg.goto(BASE + "#n=PK&d=BH&p=tourism"); pg.wait_for_selector(".verdict")
+    v = pg.inner_text(".verdict")
+    check("gap fill: live answer instead of 'check'", "eVisa" in v and "Confirm with the official source" not in v)
+    check("gap fill: labelled as live data", "Live data" in v)
+    pg = page(); with_proxy(pg, "down"); pg.goto(BASE + "#n=PK&d=BH&p=tourism"); pg.wait_for_selector(".verdict")
+    check("gap fill: API down keeps official 'check' result", "evisa.gov.bh" in pg.inner_text(".verdict"))
+
     # 7. API errors
     pg = page(); with_proxy(pg, "500"); pg.goto(BASE + "#n=IN&d=BR&p=tourism"); pg.wait_for_selector(".verdict")
     check("api 500: friendly error + retry", pg.locator("#retryBtn").count() == 1)

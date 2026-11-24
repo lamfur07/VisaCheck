@@ -202,9 +202,29 @@
     }
     if (VERIFIED.has(dest)) {
       const res = evaluateTrip({ nationalities: state.nats, destination: dest, purpose: state.purpose, docs: [...state.docs] });
-      return { destName: res.dest.name, destFlag: res.dest.flag, verified: true, verifiedOn: res.dest.verified || LAST_VERIFIED, best: res.best, perPassport: res.perPassport, links: res.dest.links };
+      const out = { destName: res.dest.name, destFlag: res.dest.flag, verified: true, verifiedOn: res.dest.verified || LAST_VERIFIED, best: res.best, perPassport: res.perPassport, links: res.dest.links };
+      if (res.best.status === "check") return fillGapFromApi(out);
+      return out;
     }
     return evaluateViaApi(dest);
+  }
+
+  // Verified rules couldn't confirm this case: give a clear answer from live data instead of a dead end,
+  // labelled as unverified, and keep the official links from the verified rules.
+  async function fillGapFromApi(out) {
+    if (!CFG.apiProxyUrl || !["tourism", "business", "transit"].includes(state.purpose)) return out;
+    try {
+      const live = await evaluateViaApi(state.dest);
+      const b = live.best;
+      if (!b || ["check", "banned"].includes(b.status)) return out;
+      b.notes = [`Our checked rules for ${out.destName} couldn't confirm this case from an official source, so this answer comes from live data. Confirm on the official links below before you book.`, ...(b.notes || [])];
+      b.checklist = (b.checklist && b.checklist.length) ? b.checklist : out.best.checklist;
+      b.links = [...(out.best.links || []), ...(b.links || [])];
+      return { ...live, links: out.links };
+    } catch (err) {
+      if (err && err.code === "ABORT") throw err;
+      return out;
+    }
   }
 
   async function evaluateViaApi(dest) {
