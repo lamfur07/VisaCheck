@@ -45,16 +45,16 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 
 ## Batch 4
 
-- [ ] BG Bulgaria
-- [ ] LI Liechtenstein
-- [ ] VN Vietnam
-- [ ] ID Indonesia
-- [ ] MY Malaysia
-- [ ] PH Philippines
-- [ ] EG Egypt
-- [ ] MA Morocco
-- [ ] ZA South Africa
-- [ ] QA Qatar
+- [x] BG Bulgaria (2026-11-25)
+- [x] LI Liechtenstein (2026-11-25)
+- [x] VN Vietnam (2026-11-25)
+- [x] ID Indonesia (2026-11-25)
+- [x] MY Malaysia (2026-11-25)
+- [x] PH Philippines (2026-11-25)
+- [x] EG Egypt (2026-11-25)
+- [x] MA Morocco (2026-11-25)
+- [x] ZA South Africa (2026-11-25)
+- [x] QA Qatar (2026-11-25)
 
 ## Batch 5
 

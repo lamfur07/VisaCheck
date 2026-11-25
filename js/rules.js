@@ -352,7 +352,7 @@
   // nationalities, or null when the national list couldn't be confirmed), atvNotes, reg (arrival registration note).
   function schengen(id, name, flag, portal, longStay, opts = {}) {
     const atvExtra = opts.atvExtra === undefined ? S("") : opts.atvExtra;
-    const reg = opts.reg ? [opts.reg] : [];
+    const reg = opts.reg ? [].concat(opts.reg) : []; // batch 4: reg may be an array of notes
     return {
       id, name, flag, schengen: true, verified: opts.verified || "2026-11-20",
       links: [
@@ -384,6 +384,13 @@
             notes: ["ETIAS is not in operation yet and nothing can be applied for. Ignore sites asking for payment.", "Days spent anywhere in the 29 Schengen countries count towards the 90.", ...(p === "transit" ? [] : reg)]
           };
         }
+        if (p === "transit" && opts.noAirport) return { // batch 4: no airport (Liechtenstein), so transit is overland
+          status: "visa", stay: "Up to 90 days in any 180",
+          auth: { name: "Schengen short-stay visa (Type C)", fee: "€90 (children 6 to 11: €45)", time: "Usually 15 days", url: portal },
+          summary: `${name} has no airport, so passing through means crossing the Schengen Area by land. Your nationality needs a Schengen short-stay visa for that.`,
+          checklist: [common.passport("Issued in the last 10 years, valid 3+ months after you leave."), item("Onward ticket and visa for final destination", ""), common.photo()],
+          notes: reg
+        };
         if (p === "transit") {
           const atvExempt = has(ctx, "visa:US", "visa:CA", "visa:JP", "pr:US", "pr:CA", "pr:JP", "pr:EU");
           const national = atvExtra && atvExtra.has(nat) && !SCH_ATV.has(nat);
@@ -577,6 +584,30 @@
         ...(RO_INVITE.has(nat) ? ["Romania: to apply for a visa your nationality needs an invitation approved by the General Inspectorate for Immigration (IGI)."] : []),
         ...(S("AF MG PK YE").has(nat) ? ["Romania: polio vaccination is mandatory for travellers coming from Afghanistan, Madagascar, Pakistan or Yemen."] : [])
       ] });
+
+  // ---------- Batch 4 Schengen states (checked 2026-11-25) ----------
+  const B4 = "2026-11-25";
+  // Bulgaria: https://mfa.bg/en/services-travel/consular-services/travel-bulgaria/visa-bulgaria (PDFs updated 02-07-2026; fee €90,
+  //  €35 for AM AZ BY under facilitation agreements) ; D visa: https://www.mfa.bg/upload/716/VISA_TYPE_D.pdf
+  //  Work: https://www.az.government.bg/pages/razresheniya-za-rabota-na-chuzhdenci/
+  //  ATV: Ordinance on visas, Annex 1 = EU common list only (last amended DV 27/2019):
+  //   https://mfa.bg/upload/47438/Наредба за условията и реда за издаване на визи и определяне на визовия режим.pdf
+  //  Registration: Law on Foreigners Art. 18 (address card) https://www.mfa.bg/upload/138160/Закон за чужденците в Република България.pdf ;
+  //   host registers a guest's address within 48 hours (Ordinance, invitation-declaration annexes 3 to 6).
+  const BG = schengen("BG", "Bulgaria", "🇧🇬", "https://mfa.bg/en/services-travel/consular-services/travel-bulgaria/visa-bulgaria",
+    { study: "https://www.mfa.bg/upload/716/VISA_TYPE_D.pdf", work: "https://www.az.government.bg/pages/razresheniya-za-rabota-na-chuzhdenci/" },
+    { verified: B4,
+      reg: "Bulgaria: write your address on the address card at entry. If you stay with a private host instead of a hotel, the host must register your address within 48 hours.",
+      natWarn: (nat) => S("AM AZ BY").has(nat) ? ["Bulgaria: the short-stay visa fee for your nationality is €35 under an EU visa facilitation agreement."] : [] });
+  // Liechtenstein: https://llv.li/en/national-administration/migration-and-passport-office/visa (visas issued by Swiss representations,
+  //  or Austria, Hungary or Lithuania in some places) ; no airport: https://www.regierung.li/files/attachments/20251125-broschuere-begegnung-mit-einem-kleinstaat-639080401433496309.pdf
+  //  Work: https://www.llv.li/en/national-administration/migration-and-passport-office/residence-in-liechtenstein-for-employment-purposes/authorization-procedure
+  //  Study: https://www.llv.li/en/national-administration/migration-and-passport-office/residence-in-liechtenstein-without-employment/short-stay-permit-for-study-education-l-
+  const LI = schengen("LI", "Liechtenstein", "🇱🇮", "https://llv.li/en/national-administration/migration-and-passport-office/visa",
+    { study: "https://www.llv.li/en/national-administration/migration-and-passport-office/residence-in-liechtenstein-without-employment/short-stay-permit-for-study-education-l-",
+      work: "https://www.llv.li/en/national-administration/migration-and-passport-office/residence-in-liechtenstein-for-employment-purposes/authorization-procedure" },
+    { verified: B4, noAirport: true,
+      reg: ["Liechtenstein: visa applications go to the Swiss embassy or consulate for where you live (in some countries Austria, Hungary or Lithuania instead).", "Liechtenstein has no airport. Most visitors fly into Zurich and continue by road or rail."] });
 
   // =====================================================================
   // AUSTRALIA
@@ -1413,10 +1444,475 @@
     }
   };
 
+  // =====================================================================
+  // VIETNAM
+  // Sources (checked 2026-11-25):
+  //  https://new.mofa.gov.vn/tin-chi-tiet/chi-tiet/viet-nam-39-s-visa-exemption-list-57163-596.html (MOFA exemption table, 30/06/2025)
+  //  https://en.baochinhphu.vn/viet-nam-waives-visas-for-citizens-of-24-countries-from-mid-august-111250815144715035.htm
+  //   (Res. 44/NQ-CP to 14 Mar 2028; Res. 229/NQ-CP 15 Aug 2025 to 14 Aug 2028)
+  //  https://en.baochinhphu.vn/understanding-viet-nams-e-visa-111250218154519057.htm (eVisa for all nationalities, US$25/US$50, up to 90 days)
+  //  https://vbpl.moj.gov.vn/TW/Lists/vbpqTA/Attachments/11017/47.2014.QH13.doc (Law 47/2014: Art. 20 passport 6 months, Art. 25 airside transit,
+  //   Art. 33 accommodation declares guests)
+  //  https://en.baochinhphu.vn/fresh-regulations-on-work-permit-issuance-to-foreign-workers-111250808104813884.htm (Decree 219/2025)
+  // CL and PA appear in the MOFA table but the passport-type column couldn't be read, so they return "check".
+  // Myanmar's stay length (30 in the MOFA table, 14 elsewhere) is unconfirmed.
+  // =====================================================================
+  const VN_45 = S("DE FR IT ES GB RU JP KR DK SE NO FI BE BG HR CZ HU LU NL PL RO SK SI CH");
+  const VN_STAY = { SG: "30 days", ID: "30 days", MY: "30 days", TH: "30 days", KH: "30 days", LA: "30 days", KG: "30 days", MN: "30 days",
+    BY: "30 days (max 90 days a calendar year)", KZ: "30 days (max 90 in any 180)", PH: "21 days", BN: "14 days" };
+  const VN_EV = "https://evisa.gov.vn/";
+
+  const VN = {
+    id: "VN", name: "Vietnam", flag: "🇻🇳", verified: "2026-11-25",
+    links: [
+      ["Vietnam eVisa (official)", VN_EV],
+      ["Visa exemption list (MOFA)", "https://new.mofa.gov.vn/tin-chi-tiet/chi-tiet/viet-nam-39-s-visa-exemption-list-57163-596.html"],
+      ["Law on entry and exit of foreigners", "https://vbpl.moj.gov.vn/TW/Lists/vbpqTA/Attachments/11017/47.2014.QH13.doc"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months, with a blank page.";
+      if (nat === "VN") return { status: "citizen", summary: "Travel on your Vietnamese passport." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a DH visa, applied for with the help of your Vietnamese school or university." : "Work needs an LĐ visa and a work permit (or exemption certificate) from the provincial People's Committee, arranged by your employer.",
+        auth: { name: p === "study" ? "DH visa (study)" : "LĐ visa + work permit", fee: "Varies", time: "Work permits: about 10 working days", url: p === "study" ? VN_EV : "https://en.baochinhphu.vn/fresh-regulations-on-work-permit-issuance-to-foreign-workers-111250808104813884.htm" },
+        checklist: [item(p === "study" ? "Admission letter from a Vietnamese institution" : "Employment contract and work permit", ""), common.passport(passport), common.photo()]
+      };
+      if (p === "transit") return { status: "free", summary: "No visa needed if you stay in the international transit area of the airport. Leaving the airport needs a visa or visa exemption.", checklist: [common.passport(passport), item("Onward boarding pass", "Stay airside.")] };
+      const stay = VN_45.has(nat) ? "45 days" : VN_STAY[nat] || (nat === "MM" ? "Visa-free; we couldn't confirm whether 14 or 30 days" : null);
+      if (stay) return {
+        status: "free", stay,
+        summary: "No visa needed for this stay. For a longer stay, apply for an eVisa (up to 90 days) instead.",
+        checklist: lightChecklist({ purpose: p, passport }),
+        ...(nat === "GB" ? { warn: ["British National (Overseas) passports are not covered. BN(O) holders need an eVisa."] } : {}),
+        notes: [...(VN_45.has(nat) ? ["This exemption is set by government resolution and runs until at least March 2028. Check before booking trips after that."] : []), "Your hotel or host declares your stay to the local police."]
+      };
+      if (nat === "CL" || nat === "PA") return {
+        status: "check",
+        summary: "Vietnam lists a visa exemption for your nationality, but we couldn't confirm that it covers ordinary passports. If it doesn't, the eVisa (up to 90 days) is open to all nationalities.",
+        checklist: [common.passport(passport)],
+        links: [["Visa exemption list (MOFA)", "https://new.mofa.gov.vn/tin-chi-tiet/chi-tiet/viet-nam-39-s-visa-exemption-list-57163-596.html"], ["Vietnam eVisa (official)", VN_EV]]
+      };
+      return {
+        status: "evisa", stay: "Up to 90 days, single or multiple entry",
+        auth: { name: "Vietnam eVisa", fee: "US$25 single entry, US$50 multiple entry", time: "Apply online before travel", url: VN_EV },
+        summary: "Apply online for an eVisa before you travel. It's open to all nationalities.",
+        checklist: lightChecklist({ purpose: p, passport, auth: item("Approved eVisa", "Print it or keep it on your phone.", VN_EV), extra: [common.photo("Digital photo and passport scan for the online form.")] }),
+        notes: ["Enter and leave through a port listed on your eVisa (13 airports and many land and sea crossings are allowed).", "Phu Quoc island: all nationalities can stay up to 30 days without a visa if they arrive there directly.", "Only use evisa.gov.vn. Other sites charge extra."]
+      };
+    }
+  };
+
+  // =====================================================================
+  // INDONESIA
+  // Sources (checked 2026-11-25):
+  //  https://www.imigrasi.go.id/wna/daftar-negara-voa-bvk-calling-visa/daftar-negara-bebas (visa-free and visa-on-arrival lists)
+  //  https://imigrasi.go.id/wna/daftar-visa-indonesia/A1 (visa-free: 30 days, not extendable)
+  //  https://peraturan.bpk.go.id/Download/416328/Permen_Nomor10_Tahun2026.pdf (Permen Imipas 10/2026: TR BR PE KZ MO BY)
+  //  https://www.imigrasi.go.id/wna/daftar-visa-indonesia/b1 (VOA/e-VOA Rp500,000, 30 days + 30)
+  //  https://imigrasi.go.id/wna/daftar-visa-indonesia/E23 ; https://imigrasi.go.id/wna/daftar-visa-indonesia/E30A
+  //  https://allindonesia.imigrasi.go.id ; https://lovebali.baliprov.go.id/faq (Bali levy Rp150,000)
+  // The calling-visa list (AF IL KP LR NG SO) is labelled ambiguously, so those return "check".
+  // =====================================================================
+  const ID_FREE = S("BN MY TH VN PH KH SG MM LA TL SR CO HK TR BR PE KZ MO BY");
+  const ID_VOA = S(`ZA AL US AD SA AR AM AU AT AZ BH NL BY BE BR BN BA BG CZ CL DK EC EE PH FI GT HK HU IN GB IE IT IS JP DE KH CA KZ KE CO KR HR KW LA LV LI LT LU MV MY MT MA MU MX EG MC MN MZ MM NO OM PS PG FR PE PL PT QA RO RU RW NZ RS SC SG CY SK SI ES SR SE CH TW TZ TH TL CN TN TR AE UZ UA VA VE VN JO GR`);
+  const ID_CALLING = S("AF IL KP LR NG SO");
+  const ID_EV = "https://evisa.imigrasi.go.id/";
+  const ID_ARRIVAL = item("All Indonesia arrival card", "Combined immigration, customs and health declaration. Submit up to 3 days before arrival.", "https://allindonesia.imigrasi.go.id");
+
+  const ID = {
+    id: "ID", name: "Indonesia", flag: "🇮🇩", verified: "2026-11-25",
+    links: [
+      ["Indonesia eVisa and e-VOA (official)", ID_EV],
+      ["Visa-free and VOA country lists", "https://www.imigrasi.go.id/wna/daftar-negara-voa-bvk-calling-visa/daftar-negara-bebas"],
+      ["All Indonesia arrival card", "https://allindonesia.imigrasi.go.id"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months.";
+      const notes = ["Visiting Bali? Pay the Rp150,000 tourist levy online (lovebali.baliprov.go.id)."];
+      if (nat === "ID") return { status: "citizen", summary: "Travel on your Indonesian passport." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a student visa (E30 series) sponsored by your school or university, which leads to a temporary stay permit (ITAS)." : "Work needs an E23 work visa sponsored by your employer, after Ministry of Manpower approval. It leads to a temporary stay permit (ITAS/KITAS).",
+        auth: { name: p === "study" ? "Student visa (E30)" : "Work visa (E23)", fee: p === "study" ? "From Rp6,000,000 (1 year)" : "Rp5,250,000 (180 days) to Rp9,500,000 (2 years)", time: "Sponsor applies online", url: p === "study" ? "https://imigrasi.go.id/wna/daftar-visa-indonesia/E30A" : "https://imigrasi.go.id/wna/daftar-visa-indonesia/E23" },
+        checklist: [item(p === "study" ? "Sponsor letter from your school" : "Sponsor and work approval from your employer", ""), common.passport(passport), common.photo(), ID_ARRIVAL]
+      };
+      if (ID_CALLING.has(nat)) return {
+        status: "check",
+        summary: "Your nationality appears on Indonesia's calling-visa list, which means extra approval is needed before a visa is issued. We couldn't confirm the exact process. Ask the Indonesian embassy.",
+        checklist: [common.passport(passport)],
+        links: [["Calling visa list (Imigrasi)", "https://www.imigrasi.go.id/wna/daftar-negara-voa-bvk-calling-visa/daftar-negara-bebas"]]
+      };
+      if (p === "transit" && !ID_FREE.has(nat) && !ID_VOA.has(nat)) return { status: "check", summary: "We couldn't confirm airside transit rules on an official page. Leaving the airport needs a visa.", checklist: [common.passport(passport), item("Onward ticket", "")] };
+      if (ID_FREE.has(nat)) return {
+        status: "free", stay: "30 days (can't be extended)",
+        summary: "No visa needed for up to 30 days. If you might stay longer, get a visa on arrival or e-VOA instead.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [ID_ARRIVAL] }), notes
+      };
+      if (ID_VOA.has(nat)) return {
+        status: "voa", stay: "30 days, extendable once by 30",
+        auth: { name: "Visa on arrival (B1) or e-VOA", fee: "Rp500,000", time: "On arrival, or online before you fly", url: ID_EV },
+        summary: "Get a visa on arrival, or apply for the same visa online (e-VOA) before you fly to skip the queue.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [ID_ARRIVAL] }),
+        notes: [...notes, "Only use evisa.imigrasi.go.id. Other sites charge extra."]
+      };
+      return {
+        status: "evisa", stay: "Up to 60 days (extendable to 180)",
+        auth: { name: "Tourist visa (C1)", fee: "Rp1,500,000", time: "Apply online before travel", url: ID_EV },
+        summary: "Your nationality can't get a visa on arrival. Apply online for a single-entry visit visa before you travel.",
+        checklist: lightChecklist({ purpose: p, passport, auth: item("Approved eVisa", "", ID_EV), extra: [common.funds(), ID_ARRIVAL] }),
+        notes
+      };
+    }
+  };
+
+  // =====================================================================
+  // MALAYSIA
+  // Sources (checked 2026-11-25):
+  //  https://www.imi.gov.my/index.php/en/main-services/visa/visa-requirement-by-country/ (visa-required list, ASEAN rule, visa-with-reference)
+  //  https://www.kln.gov.my/web/ind_new-delhi/ (India: 30-day exemption to 31 Dec 2026; VOA for Indians via SG/TH/ID/BN)
+  //  https://english.www.gov.cn/news/202507/17/content_WS6878d7d3c6d0868f4e8f40b0.html (China-Malaysia mutual exemption from 17 Jul 2025)
+  //  https://www.imi.gov.my/index.php/en/main-services/student-pass/ ; https://esd.imi.gov.my/
+  //  MDAC: https://imigresen-online.imi.gov.my/mdac/main
+  // The official 90/30/14-day visa-free lists could not be read, so nationalities not listed below return "check".
+  // =====================================================================
+  const MY_ASEAN = S("BN KH ID LA PH SG TH VN");
+  const MY_VISA = S("AF AO BD BT BF BI CM CF CO CD CG DJ GQ ER ET GH GW CI LR ML ME MZ NP NG NE PK RW RS LK");
+  const MY_EV = "https://malaysiavisa.imi.gov.my/";
+  const MY_MDAC = item("Malaysia Digital Arrival Card (MDAC)", "Submit online within 3 days before you arrive.", "https://imigresen-online.imi.gov.my/mdac/main");
+
+  const MY = {
+    id: "MY", name: "Malaysia", flag: "🇲🇾", verified: "2026-11-25",
+    links: [
+      ["Visa requirement by country (Immigration)", "https://www.imi.gov.my/index.php/en/main-services/visa/visa-requirement-by-country/"],
+      ["Malaysia eVISA (official)", MY_EV],
+      ["Malaysia Digital Arrival Card", "https://imigresen-online.imi.gov.my/mdac/main"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months.";
+      if (nat === "MY") return { status: "citizen", summary: "Travel on your Malaysian passport." };
+      if (p === "study") return {
+        status: "permit", summary: "Higher-education students apply through EMGS for a Student Pass. You get an approval letter (eVAL) before travel, plus a single-entry visa if your nationality needs one.",
+        auth: { name: "Student Pass", fee: "RM60 (plus EMGS fees)", time: "Apply through EMGS before travel", url: "https://www.imi.gov.my/index.php/en/main-services/student-pass/" },
+        checklist: [item("Offer letter from a Malaysian institution", ""), common.passport("Valid at least 18 months."), item("Health insurance", "12 months."), item("Medical check", "Within 7 days of arrival."), common.photo()],
+        notes: ["Students may work part-time up to 20 hours a week during holidays, under conditions."]
+      };
+      if (p === "work") return {
+        status: "permit", summary: "Your employer applies for an Employment Pass through the Immigration Department's Expatriate Services Division (ESD).",
+        auth: { name: "Employment Pass", fee: "Varies", time: "Employer applies", url: "https://esd.imi.gov.my/" },
+        checklist: [item("Employment contract", ""), item("Employer approval from ESD", ""), common.passport(passport), common.photo()]
+      };
+      if (p === "transit") return { status: "check", summary: "We couldn't confirm Malaysia's airside transit rules on an official page. Ask your airline. Leaving the airport needs whatever your nationality needs to visit.", checklist: [common.passport(passport), item("Onward ticket", "")] };
+      if (nat === "IN") return {
+        status: "free", stay: "Up to 30 days",
+        summary: "Indian citizens can visit Malaysia without a visa for up to 30 days (tourism, business or transit) until 31 December 2026.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [MY_MDAC] }),
+        warn: ["This exemption ends on 31 December 2026 unless extended. For trips from 2027, check imi.gov.my before booking."],
+        notes: ["Indians arriving from Singapore, Thailand, Indonesia or Brunei with a valid visa for that country can also get a 15-day visa on arrival (RM200)."]
+      };
+      if (nat === "CN") return {
+        status: "free", stay: "Up to 30 days per visit (max 90 in any 180)",
+        summary: "Chinese citizens with ordinary passports can visit Malaysia without a visa under the mutual exemption in force since 17 July 2025.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [MY_MDAC] })
+      };
+      if (MY_ASEAN.has(nat)) return {
+        status: "free", stay: "Under 1 month",
+        summary: "ASEAN citizens don't need a visa for visits of less than a month.",
+        checklist: lightChecklist({ purpose: p, passport, extra: nat === "SG" ? [] : [MY_MDAC] }),
+        notes: nat === "SG" ? ["Singapore citizens don't need to fill in the MDAC."] : []
+      };
+      if (MY_VISA.has(nat)) return {
+        status: "visa",
+        auth: { name: "Visit visa (eVISA or Malaysian mission)", fee: "Shown when you apply", time: "Apply before travel", url: MY_EV },
+        summary: "Your nationality needs a visa. Apply online through the official eVISA portal or at a Malaysian embassy.",
+        checklist: visitorChecklist({ purpose: p, passport, form: item("eVISA application", "", MY_EV), extra: [MY_MDAC] }),
+        ...(S("AO BF BI CM CF CD CG DJ GQ ER ET GH GW CI LR ML MZ NG NE RW").has(nat) ? { warn: ["Your nationality may only enter Malaysia by air."] } : {})
+      };
+      return {
+        status: "check",
+        summary: nat === "IL" || nat === "KP" ? "Travel to Malaysia is restricted for your nationality. Check with a Malaysian embassy." : "Many nationalities can visit Malaysia without a visa for 14, 30 or 90 days, but we couldn't read the official country list. Check yours on imi.gov.my.",
+        checklist: [common.passport(passport), MY_MDAC],
+        links: [["Visa requirement by country (Immigration)", "https://www.imi.gov.my/index.php/en/main-services/visa/visa-requirement-by-country/"]]
+      };
+    }
+  };
+
+  // =====================================================================
+  // PHILIPPINES
+  // Sources (checked 2026-11-25):
+  //  https://dfa.gov.ph/list-of-countries-for-21-day-visa (30-day list; BR IL 59 days; HK MO 14 days)
+  //  https://dfa.gov.ph/dfa-news/dfa-releasesupdate/36660 (India: 14 days, or 30 days with US/JP/AU/CA/Schengen/SG/UK visa or residence, from 8 Jun 2025)
+  //  https://abudhabipe.dfa.gov.ph/AJACS-Chinese (Chinese holders of US/JP/AU/CA/Schengen visas: 7 + 14 days)
+  //  https://evisa.gov.ph/ ; https://etravel.gov.ph/
+  //  https://ottawape.dfa.gov.ph/ (9(f) student visa) ; https://vancouverpcg.dfa.gov.ph/ (9(g) work visa + DOLE AEP)
+  // China's 14-day visa-free entry (from 16 Jan 2026) couldn't be confirmed on a DFA page, so CN without AJACS visas returns "check".
+  // =====================================================================
+  const PH_30 = S(`AD AO AG AR AU AT BS BH BB BE BZ BJ BT BO BW BN BG BF BI KH CM CA CV CF TD CL CO KM CG CR CI HR CY CZ CD DK DJ DM DO EC SV GQ ER EE ET FJ FI FR GA GM DE GH GR GD GT GN GW GY HT HN HU IS ID IE IT JM JP KZ KE KI KW KG LA LV LS LR LI LT LU MG MW MY MV ML MT MH MR MU MX FM MC MN MA MZ MM NA NP NL NZ NI NE NO OM PW PA PG PY PE PL PT QA KR RO RU RW KN LC VC WS SM ST SA SN SC SG SK SI SB ZA ES SR SZ SE CH TJ TH TG TT TN TR TM TV UG AE GB TZ US UY UZ VU VA VE VN ZM ZW`);
+  const PH_STAY = { BR: "59 days", IL: "59 days", HK: "14 days (HKSAR passport)", MO: "14 days (Macao SAR passport)" };
+  const PH_EV = "https://evisa.gov.ph/";
+  const PH_ETRAVEL = item("eTravel registration", "Free. Register within 72 hours before arrival.", "https://etravel.gov.ph/");
+
+  const PH = {
+    id: "PH", name: "Philippines", flag: "🇵🇭", verified: "2026-11-25",
+    links: [
+      ["Visa-free countries (DFA)", "https://dfa.gov.ph/list-of-countries-for-21-day-visa"],
+      ["Philippine eVisa (official)", PH_EV],
+      ["eTravel arrival registration", "https://etravel.gov.ph/"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months beyond your stay.";
+      if (nat === "PH") return { status: "citizen", summary: "Travel on your Philippine passport." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a 9(f) student visa. Your school files with CHED and the Bureau of Immigration, then the embassy issues the visa." : "Work needs a 9(g) visa. First your employer gets you an Alien Employment Permit (AEP) from DOLE, then files with the Bureau of Immigration.",
+        auth: { name: p === "study" ? "9(f) student visa" : "9(g) work visa + DOLE AEP", fee: "Set by the embassy", time: "Several weeks", url: p === "study" ? "https://ottawape.dfa.gov.ph/" : "https://vancouverpcg.dfa.gov.ph/" },
+        checklist: [item(p === "study" ? "Admission letter and CHED endorsement" : "AEP from DOLE and employment contract", ""), common.passport(passport), common.photo(), PH_ETRAVEL],
+        notes: p === "work" ? ["Register for an ACR I-Card within 7 days of arrival."] : []
+      };
+      const stay = PH_30.has(nat) ? "30 days" : PH_STAY[nat];
+      if (stay) return {
+        status: "free", stay,
+        summary: p === "transit" ? "No visa needed." : "No visa needed for tourism or business visits.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [PH_ETRAVEL] }),
+        notes: ["Stays can be extended at the Bureau of Immigration."]
+      };
+      const ajacs = has(ctx, "visa:US", "visa:JP", "visa:AU", "visa:CA", "visa:SCHENGEN");
+      const inDocs = has(ctx, "visa:US", "visa:JP", "visa:AU", "visa:CA", "visa:SCHENGEN", "visa:SG", "visa:GB", "pr:US", "pr:JP", "pr:AU", "pr:CA", "pr:EU", "pr:SG", "pr:GB");
+      if (nat === "IN" && p === "tourism") return {
+        status: inDocs ? "resident" : "free", stay: inDocs ? "30 days (can't be extended)" : "14 days (can't be extended)",
+        summary: inDocs ? "With your US, Japan, Australia, Canada, Schengen, Singapore or UK visa or residence, you can visit for tourism for 30 days without a visa." : "Indian citizens can visit for tourism for 14 days without a visa. With a valid US, Japan, Australia, Canada, Schengen, Singapore or UK visa or residence it's 30 days.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [...(inDocs ? [item("Your valid visa or residence permit", "From the US, Japan, Australia, Canada, Schengen, Singapore or UK.")] : []), PH_ETRAVEL] }),
+        notes: ["For longer stays or business, apply for an eVisa instead."]
+      };
+      if (nat === "CN" && ajacs && p !== "transit") return {
+        status: "resident", stay: "7 days, extendable by 14 (21 max)",
+        summary: "With a valid US, Japan, Australia, Canada or Schengen visa you can visit without a Philippine visa.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [item("Your valid US, Japan, Australia, Canada or Schengen visa", ""), PH_ETRAVEL] })
+      };
+      if (nat === "CN") return {
+        status: "check",
+        summary: "A 14-day visa-free entry for Chinese citizens (Manila and Cebu airports, from 16 January 2026) has been reported, but we couldn't confirm it on a DFA page. Otherwise you need a visa or eVisa.",
+        checklist: [common.passport(passport), PH_ETRAVEL],
+        links: [["Philippine eVisa (official)", PH_EV]]
+      };
+      if (p === "transit") return { status: "check", summary: "We couldn't confirm visa-free airside transit for your nationality. Ask your airline or the Philippine embassy.", checklist: [common.passport(passport), item("Onward ticket", "")] };
+      return {
+        status: "visa",
+        auth: { name: "Temporary visitor visa (9(a))", fee: "Shown when you apply", time: "eVisa: 7 to 12 working days (single entry)", url: PH_EV },
+        summary: "You need a visa. Apply online through the official eVisa portal, or at a Philippine embassy if eVisa isn't open to your nationality.",
+        checklist: visitorChecklist({ purpose: p, passport, form: item("eVisa application", "", PH_EV), extra: [PH_ETRAVEL] })
+      };
+    }
+  };
+
+  // =====================================================================
+  // EGYPT
+  // Sources (checked 2026-11-25):
+  //  https://visa2egypt.gov.eg/eVisa/FAQ (official eVisa: 78 nationalities, US$30 single / US$65 multiple)
+  //  https://egyptconsulate.co.uk/visas/ (visa on arrival list; Sinai resort stamp, updated 4 Aug 2024)
+  //  https://egyptembassy.net/consular-services/visas-travel/visa-requirements/ (security approval list; QR visa from 1 Sep 2026)
+  //  https://www.gov.uk/foreign-travel-advice/egypt/entry-requirements (UK FCDO, 18 Nov 2026: VOA US$30 cash)
+  // Nationalities on neither list (including some Arab states that may be visa-free) return "check".
+  // The 96-hour transit scheme ended its stated term in April 2026, so transit returns "check".
+  // =====================================================================
+  const EG_VOA = union(EU, S("GB US AU GE JP CA NZ NO MK KR"));
+  const EG_EVISA = S("AL AR AM AU AT AZ BH BY BE BO BA BR BG CA CL CN TW CO HR CY CZ DK EC EE FI FR GE DE GR HU IS IN IQ IE IT JP KR KW LV LT LU MK MY MT MX MD MC ME NL NZ NO OM PY PE PL PT QA XK RO RU SM SA RS SG SK SI ZA ES SE CH UA AE GB US UY VA VE VN");
+  const EG_SECURITY = S("AF ET IR IL ML NE PS SD SY");
+  const EG_EV = "https://visa2egypt.gov.eg/";
+
+  const EG = {
+    id: "EG", name: "Egypt", flag: "🇪🇬", verified: "2026-11-25",
+    links: [
+      ["Egypt eVisa (official)", EG_EV],
+      ["Visa requirements (Embassy in Washington)", "https://egyptembassy.net/consular-services/visas-travel/visa-requirements/"],
+      ["Visas (Consulate in London)", "https://egyptconsulate.co.uk/visas/"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months from arrival, with a blank page.";
+      if (nat === "EG") return { status: "citizen", summary: "Travel on your Egyptian passport or ID." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Enter on a visa, then get a study residence permit inside Egypt from the Passports, Emigration and Nationality Administration." : "Your employer gets a work permit from the Ministry of Labour (security clearance and HIV test needed), then you get a residence permit inside Egypt.",
+        auth: { name: p === "study" ? "Study residence permit" : "Work permit + residence permit", fee: "Varies", time: "Several weeks", url: "https://egyptembassy.net/consular-services/visas-travel/visa-requirements/" },
+        checklist: [item(p === "study" ? "Enrolment letter from an Egyptian institution" : "Employment contract and Ministry of Labour approval", ""), common.passport(passport), common.photo()]
+      };
+      if (p === "transit") return { status: "check", summary: "We couldn't confirm Egypt's current transit rules on an official page. Ask your airline.", checklist: [common.passport(passport), item("Onward ticket", "")] };
+      if (EG_SECURITY.has(nat)) return {
+        status: "visa",
+        auth: { name: "Visa with security approval", fee: "Set by the embassy", time: "6 to 8 weeks, sometimes 3 months", url: "https://egyptembassy.net/consular-services/visas-travel/visa-requirements/" },
+        summary: "Your nationality needs a visa from an Egyptian embassy with prior security approval. Visa on arrival isn't available.",
+        checklist: visitorChecklist({ purpose: p, passport })
+      };
+      const voa = EG_VOA.has(nat), ev = EG_EVISA.has(nat);
+      if (voa || ev) return {
+        status: voa ? "voa" : "evisa", stay: "Usually 30 days",
+        auth: voa ? { name: "Visa on arrival (or eVisa)", fee: "US$30 cash at the airport, or US$30 eVisa online", time: "On arrival", url: EG_EV } : { name: "Egypt eVisa", fee: "US$30 single entry, US$65 multiple entry", time: "Apply at least 7 days before travel", url: EG_EV },
+        summary: voa ? "You can buy a visa on arrival at the airport, or apply for the eVisa online beforehand." : "Apply online for an eVisa at least 7 days before you travel.",
+        checklist: lightChecklist({ purpose: p, passport, ...(voa ? {} : { auth: item("Approved eVisa", "Print it.", EG_EV) }) }),
+        notes: [...((voa && (EU.has(nat) || nat === "GB" || nat === "US")) ? ["Staying only in Sharm El Sheikh, Dahab, Nuweiba or Taba? You can get a free entry stamp for up to 15 days instead."] : []), "Only use visa2egypt.gov.eg. Other sites charge extra."]
+      };
+      return {
+        status: "check",
+        summary: nat === "BD" ? "Bangladeshi citizens must get a visa from an Egyptian embassy before travel. We couldn't confirm the process on an official page." : "Your nationality isn't on Egypt's eVisa or visa-on-arrival lists. Some nationalities are visa-free and others need an embassy visa. Ask the Egyptian embassy.",
+        checklist: [common.passport(passport)],
+        links: [["Visa requirements (Embassy in Washington)", "https://egyptembassy.net/consular-services/visas-travel/visa-requirements/"]]
+      };
+    }
+  };
+
+  // =====================================================================
+  // MOROCCO
+  // Sources (checked 2026-11-25):
+  //  https://diplomatie.ma/en/launch-electronic-visa-evisa (eVisa: 30 days, 24h/72h processing) ; https://www.acces-maroc.ma (portal)
+  //  https://www.gov.uk/foreign-travel-advice/morocco/entry-requirements (UK FCDO, 12 Nov 2026: British citizens visa-free 90 days)
+  //  Law 02-03 (entry and stay of foreigners): https://adala.justice.gov.ma/api/uploads/2024/04/30/Entrée et au séjour des étrangers au Maroc-1714463632505.pdf
+  // consulat.ma and diplomatie.ma visa-exempt lists blocked automated access, so every nationality except GB returns "check".
+  // =====================================================================
+  const MA_EV = "https://www.acces-maroc.ma/";
+  const MA = {
+    id: "MA", name: "Morocco", flag: "🇲🇦", verified: "2026-11-25",
+    links: [
+      ["Visa-exempt countries (consulat.ma)", "https://www.consulat.ma/en/list-countries-whose-citizens-are-exempted-entry-visa-morocco"],
+      ["Morocco eVisa (official)", MA_EV],
+      ["Visa types (consulat.ma)", "https://consulat.ma/fr/types-de-visas-octroyes"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      if (nat === "MA") return { status: "citizen", summary: "Travel on your Moroccan passport or ID." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: (p === "study" ? "Study" : "Work") + " longer than 90 days needs a residence card (carte d'immatriculation), applied for in Morocco. " + (p === "work" ? "Your employment contract must first be approved by the Ministry of Labour. " : "") + "If your nationality needs a visa, get one from a Moroccan consulate first.",
+        auth: { name: "Carte d'immatriculation (residence card)", fee: "Varies", time: "Apply after arrival", url: "https://consulat.ma/fr/types-de-visas-octroyes" },
+        checklist: [item(p === "study" ? "Enrolment certificate from a Moroccan institution" : "Approved employment contract", ""), common.passport(), common.photo()]
+      };
+      if (nat === "GB" && p !== "transit") return {
+        status: "free", stay: "Up to 90 days",
+        summary: "British citizens don't need a visa for tourist visits of up to 90 days.",
+        checklist: lightChecklist({ purpose: p, passport: "Valid at least 3 months from arrival." }),
+        notes: ["Staying longer than 90 days needs an extension from the police."]
+      };
+      return {
+        status: "check",
+        summary: p === "transit" ? "We couldn't confirm Morocco's transit rules on an official page. Ask your airline." : "We couldn't read Morocco's official visa-exempt list. If your nationality needs a visa and you live in, or hold a valid visa for, the EU/Schengen, US, UK, Canada, Australia, Japan or similar, you may qualify for the eVisa (30 days, acces-maroc.ma).",
+        checklist: [common.passport()],
+        links: [["Visa-exempt countries (consulat.ma)", "https://www.consulat.ma/en/list-countries-whose-citizens-are-exempted-entry-visa-morocco"], ["Morocco eVisa eligibility (official)", MA_EV]]
+      };
+    }
+  };
+
+  // =====================================================================
+  // SOUTH AFRICA
+  // Sources (checked 2026-11-25):
+  //  https://www.dha.gov.za/index.php/immigration-services/exempt-countries (DHA exempt list, issued 09 Dec 2025)
+  //  https://www.gov.za/services/temporary-residence/visa (no visas at ports of entry)
+  //  https://www.gov.za/news/speeches/minister-leon-schreiber-launch-south-africa%E2%80%99s-electronic-travel-authorisation-12-aug (ETA, 12 Aug 2026)
+  //  https://www.gov.za/sites/default/files/gcis_document/202608/55209rg12036gon7834.pdf (Gazette 55209: ETA R500, visitor visa R425, work R1,520)
+  //  https://dirco.gov.za/canberra/transit-visa/ (airside transit at 4 airports; PK BD need transit visa, 23 Dec 2025)
+  //  https://dirco.gov.za/canberra/visitors-visa/ (passport 30 days after departure, 3 blank pages) ; https://dirco.gov.za/canberra/yellow-fever/
+  //  https://dirco.gov.za/canberra/critical-skills-work-visa/ ; https://dirco.gov.za/canberra/work-permit/
+  // British overseas territories on the DHA list are left out (their citizens travel on British passports).
+  // =====================================================================
+  const ZA_90 = S("AD AO AR AU AT BE BW BR BG CA CL HR CZ DK EC EE FI FR DE GH GR HU IS IE IL IT JM JP KE LV LS LI LT LU MG MY MT MU MC NA NL NZ NO PA PY PT QA RO RU VC SM ST SA SC SG SK SI ES SE CH TZ TT TN AE GB US UY VE ZM ZW");
+  const ZA_PA = S("AO GH KE MG NA SC TZ ZM"); // 90 days per calendar year
+  const ZA_30 = S("AG BS BB BZ BJ BO CV CR CY GA GY HK JO SZ MO MW MV MZ PE PL KR TH TR");
+  const ZA_ETA_PILOT = S("CN IN ID MX");
+  const ZA_ETA = "https://eta.dha.gov.za/";
+  const ZA_PASSPORT = "Valid at least 30 days after you leave, with 3 blank pages.";
+
+  const ZA = {
+    id: "ZA", name: "South Africa", flag: "🇿🇦", verified: "2026-11-25",
+    links: [
+      ["Visa-exempt countries (Home Affairs)", "https://www.dha.gov.za/index.php/immigration-services/exempt-countries"],
+      ["Electronic Travel Authorisation (official)", ZA_ETA],
+      ["Visas (gov.za)", "https://www.gov.za/services/temporary-residence/visa"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const yf = "Yellow fever certificate needed if you are arriving from, or spent over 12 hours in transit in, a yellow fever risk country.";
+      if (nat === "ZA") return { status: "citizen", summary: "Travel on your South African passport." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a study visa from a South African mission or VFS centre before you travel." : "Work needs a critical skills work visa or a general work visa, applied for before you travel.",
+        auth: { name: p === "study" ? "Study visa" : "Critical skills or general work visa", fee: p === "study" ? "R425" : "R1,520", time: "Several weeks", url: p === "study" ? "https://dirco.gov.za/canberra/visitors-visa/" : "https://dirco.gov.za/canberra/critical-skills-work-visa/" },
+        checklist: [item(p === "study" ? "Letter of acceptance from a South African institution" : "Job offer and skills evidence", ""), common.passport(ZA_PASSPORT), common.photo(), item("Police clearance and medical report", "Usually required for long stays.")],
+        notes: [yf]
+      };
+      if (p === "transit") {
+        if (nat === "PK" || nat === "BD") return { status: "visa", auth: { name: "Transit visa (form DHA-84)", fee: "R425", time: "Apply before travel", url: "https://dirco.gov.za/canberra/transit-visa/" }, summary: "Your nationality needs a transit visa even to change planes.", checklist: [common.passport(ZA_PASSPORT), item("Onward ticket and visa for final destination", "")] };
+        return { status: "free", summary: "No transit visa needed to change planes at OR Tambo, Cape Town, King Shaka or Lanseria. Transit over land needs a visa if your nationality needs one to visit.", checklist: [common.passport(ZA_PASSPORT), item("Onward boarding pass", "Stay airside.")] };
+      }
+      const stay = ZA_90.has(nat) ? (ZA_PA.has(nat) ? (nat === "AO" ? "30 days per visit, 90 days a year" : "90 days a year") : "Up to 90 days") : ZA_30.has(nat) ? "Up to 30 days" : null;
+      if (stay) return {
+        status: "free", stay,
+        summary: "No visa needed for tourism or business visits.",
+        checklist: lightChecklist({ purpose: p, passport: ZA_PASSPORT, extra: [item("Children: birth certificate", "Plus a parental consent letter if travelling with one parent.")] }),
+        notes: [yf, "You can also use the optional ETA (eta.dha.gov.za) to speed up arrival."]
+      };
+      return {
+        status: "visa",
+        auth: ZA_ETA_PILOT.has(nat) ? { name: "Visitor visa via ETA", fee: "R500 ETA + R425 visa", time: "Usually within 24 hours", url: ZA_ETA } : { name: "Visitor visa", fee: "R425", time: "Apply before travel (no visas on arrival)", url: "https://dirco.gov.za/canberra/visitors-visa/" },
+        summary: ZA_ETA_PILOT.has(nat) ? "You need a visa. You can apply online through the Electronic Travel Authorisation (ETA) for arrival at OR Tambo, Cape Town, King Shaka or Lanseria." : "You need a visitor visa from a South African mission or VFS centre before you travel. Visas aren't issued on arrival.",
+        checklist: visitorChecklist({ purpose: p, passport: ZA_PASSPORT, ...(ZA_ETA_PILOT.has(nat) ? { form: item("ETA application", "", ZA_ETA) } : {}), extra: [item("Proof of funds", "About R3,000 per person per month.")] }),
+        notes: [yf]
+      };
+    }
+  };
+
+  // =====================================================================
+  // QATAR
+  // Sources (checked 2026-11-25):
+  //  https://visitqatar.com/intl-en/plan-your-trip/visas (Qatar Tourism: 102 visa-free nationalities, Hayya tourist eVisa QAR 100 for all
+  //   non-GCC nationalities, Qatar-Oman joint tourist visa list, 96-hour transit visa)
+  //  https://hayya.qa (GCC citizens need no visa) ; https://hukoomi.gov.qa/en/services/apply-for-issuing-work-approvals
+  // The per-country visa-free lists (MOI) couldn't be read, so we point to the eVisa route that is open to everyone.
+  // =====================================================================
+  const QA_JOINT = S("AD AU AT BE BN CA CY DK FI FR DE GR HK HU IS IE IT JP LI LU MY MC ME NL NZ NO PL PT SM SG KR ES SE CH GB US VA");
+  const QA_HAYYA = "https://hayya.qa/";
+
+  const QA = {
+    id: "QA", name: "Qatar", flag: "🇶🇦", verified: "2026-11-25",
+    links: [
+      ["Hayya eVisa (official)", QA_HAYYA],
+      ["Visas (Visit Qatar)", "https://visitqatar.com/intl-en/plan-your-trip/visas"],
+      ["Work approvals (Hukoomi)", "https://hukoomi.gov.qa/en/services/apply-for-issuing-work-approvals"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months.";
+      if (nat === "QA") return { status: "citizen", summary: "Travel on your Qatari passport or ID." };
+      if (GCC.has(nat)) return { status: "free", summary: "GCC citizens don't need a visa for Qatar.", checklist: [item("Passport or GCC national ID", "")] };
+      if (p === "work") return {
+        status: "permit", summary: "Your employer gets a work visa approval for you. After arrival you get a residence permit (QID) from the Ministry of Interior.",
+        auth: { name: "Work visa + residence permit (QID)", fee: "Usually paid by employer", time: "Employer applies", url: "https://hukoomi.gov.qa/en/services/apply-for-issuing-work-approvals" },
+        checklist: [item("Employment contract", ""), item("Medical examination and fingerprints", "Done in Qatar after arrival."), common.passport(passport), common.photo()]
+      };
+      if (p === "study") return { status: "check", summary: "Your Qatari university or school sponsors your student residence permit. We couldn't confirm the process on an official page.", checklist: [common.passport(passport)], links: [["Hukoomi (Qatar government portal)", "https://hukoomi.gov.qa/en/"]] };
+      if (p === "transit") return { status: "check", summary: "Changing planes at Hamad International usually needs no visa, but we couldn't confirm this on an official page. Qatar Airways passengers with a 6+ hour layover can get a transit visa for up to 96 hours.", checklist: [common.passport(passport), item("Onward ticket", "")], links: [["Visas (Visit Qatar)", "https://visitqatar.com/intl-en/plan-your-trip/visas"]] };
+      if (QA_JOINT.has(nat)) return {
+        status: "free", stay: "30 days (Qatar-Oman joint tourist visa, extendable by 30)",
+        summary: "No need to apply in advance: your nationality gets entry on arrival, including the Qatar-Oman joint tourist visa that covers both countries.",
+        checklist: lightChecklist({ purpose: p, passport })
+      };
+      return {
+        status: "evisa", stay: "As shown on your eVisa",
+        auth: { name: "Hayya tourist eVisa (A1)", fee: "QAR 100", time: "Apply online before travel", url: QA_HAYYA },
+        summary: "The Hayya tourist eVisa is open to all nationalities. Your nationality may also be among the 102 that can enter visa-free on arrival: check hayya.qa before applying.",
+        checklist: lightChecklist({ purpose: p, passport, auth: item("Approved Hayya eVisa", "", QA_HAYYA) }),
+        notes: ["Holders of residence or visas from some countries (e.g. GCC residents) may have extra options on hayya.qa."]
+      };
+    }
+  };
+
   // ---------- Engine ----------
   const DESTINATIONS = [US, CA, GB, FR, DE, IT, ES, NL, PT, GR, CH, AU, JP, AE, MX, BH, IN, TH, IE, NZ, TR, SG, KR, CN, SA,
     BR, AT, BE, CZ, PL, HU, HR, DK, SE, NO,
-    FI, IS, MT, LU, SI, SK, EE, LV, LT, RO];
+    FI, IS, MT, LU, SI, SK, EE, LV, LT, RO,
+    BG, LI, VN, ID, MY, PH, EG, MA, ZA, QA];
 
   function evaluateTrip({ nationalities, destination, purpose, docs }) {
     const dest = DESTINATIONS.find((d) => d.id === destination);
