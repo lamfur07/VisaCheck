@@ -58,16 +58,16 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 
 ## Batch 5
 
-- [ ] IL Israel
-- [ ] AR Argentina
-- [ ] CO Colombia
-- [ ] PE Peru
-- [ ] CL Chile
-- [ ] CR Costa Rica
-- [ ] DO Dominican Republic
-- [ ] JM Jamaica
-- [ ] CU Cuba
-- [ ] KE Kenya
+- [x] IL Israel (2026-11-26)
+- [x] AR Argentina (2026-11-26)
+- [x] CO Colombia (2026-11-26)
+- [x] PE Peru (2026-11-26)
+- [x] CL Chile (2026-11-26)
+- [x] CR Costa Rica (2026-11-26)
+- [x] DO Dominican Republic (2026-11-26)
+- [x] JM Jamaica (2026-11-26)
+- [x] CU Cuba (2026-11-26)
+- [x] KE Kenya (2026-11-26)
 
 ## Batch 6
 

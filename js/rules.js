@@ -1908,11 +1908,597 @@
     }
   };
 
+  // =====================================================================
+  // ISRAEL
+  // Sources (checked 2026-11-26):
+  //  https://new.embassies.gov.il/usa/en/node/7328 and /node/6875 (ETA-IL mandatory for visa-exempt nationals from 1 Jan 2025, NIS 25,
+  //   up to 72 hours, valid 2 years, 90 days per visit; not needed when holding a valid visa)
+  //  https://new.embassies.gov.il/india/en/node/7005 (Indian and Sri Lankan passports are not part of ETA-IL)
+  //  https://embassies.gov.il/vienna/NewsAndEvents/Documents/2022_Foreign_Visa_to_Israel.pdf (Israel tourist visa table, 07.04.2022)
+  //  https://www.gov.uk/foreign-travel-advice/israel/entry-requirements (FCDO, 18 Nov 2026: passport 90 days after arrival, entry card)
+  //  https://new.embassies.gov.il/england/en/node/4924 (A/2 student visa)
+  // The live gov.il list (dynamiccollectors/ashrotzarim) couldn't be read, so the exempt list is the 2022 table. TH is unclear in it.
+  // =====================================================================
+  const IL_EXEMPT = S("AL AD AR AU AT BS BB BY BE BZ BW BR BG CA CF CL CO CR HR CY CZ DK DM DO EC SV EE FJ FI FR GE DE GR GD GT HT HN HK HU IS IE IT JM JP KR LV LS LI LT LU MO MK MW MT MU MX FM MC MN ME NR NL NZ NO PW PA PG PY PE PH PL PT RO RU SM RS SG SK SI SB ZA ES KN LC VC SR SZ SE CH TW TO TT UA AE GB US UY VU MD");
+  const IL_MFA = S("AF DZ EG ID IR IQ JO KP KW LB LY MY MR OM PK QA SA SO SD SY TN YE"); // visa + Foreign Ministry approval (2022 table)
+  const IL_ETA = "https://new.embassies.gov.il/usa/en/node/7328";
+  const IL_PASSPORT = "Valid at least 90 days after you arrive (UK FCDO).";
+
+  const IL = {
+    id: "IL", name: "Israel", flag: "🇮🇱", verified: "2026-11-26",
+    links: [
+      ["ETA-IL information (Israeli embassy)", IL_ETA],
+      ["Visa requirements by country (gov.il)", "https://www.gov.il/en/departments/dynamiccollectors/ashrotzarim"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      if (nat === "IL") return { status: "citizen", summary: "Enter on your Israeli passport." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs an A/2 student visa from an Israeli embassy or consulate before you travel." : "Work needs a B/1 work visa. Your Israeli employer must first get a permit for you. We couldn't confirm the details on an official page.",
+        auth: { name: p === "study" ? "A/2 student visa" : "B/1 work visa", fee: p === "study" ? "About GBP 44 (London mission)" : "Varies", time: "Apply before travel", url: p === "study" ? "https://new.embassies.gov.il/england/en/node/4924" : "https://www.gov.il/en/departments/dynamiccollectors/ashrotzarim" },
+        checklist: [item(p === "study" ? "Acceptance letter from an Israeli institution" : "Approved work permit from your employer", ""), common.passport("Valid for the whole period of the visa."), common.photo()]
+      };
+      if (p === "transit") return { status: "check", summary: "We couldn't confirm Israel's airside transit rules on an official page. Ask your airline.", checklist: [common.passport(IL_PASSPORT)], links: [["Visa requirements by country (gov.il)", "https://www.gov.il/en/departments/dynamiccollectors/ashrotzarim"]] };
+      if (nat === "TH") return { status: "check", summary: "We couldn't confirm whether Thai passports are visa-exempt. Ask the Israeli embassy.", checklist: [common.passport(IL_PASSPORT)], links: [["Visa requirements by country (gov.il)", "https://www.gov.il/en/departments/dynamiccollectors/ashrotzarim"]] };
+      if (IL_EXEMPT.has(nat)) return {
+        status: "eta", stay: "Up to 90 days",
+        auth: { name: "ETA-IL", fee: "NIS 25", time: "Response within 72 hours", url: IL_ETA },
+        summary: "No visa needed, but you must get an approved ETA-IL online before you fly.",
+        checklist: lightChecklist({ purpose: p, passport: IL_PASSPORT + (nat === "MD" ? " Moldovans need a biometric passport." : ""), auth: item("Approved ETA-IL", "Valid up to 2 years. Apply only on the official site ending in gov.il.", IL_ETA) }),
+        notes: ["You get an entry card instead of a passport stamp. Keep it until you leave."]
+      };
+      return {
+        status: "visa",
+        auth: { name: "B/2 tourist visa", fee: "Varies", time: "Apply at an Israeli embassy", url: "https://www.gov.il/en/departments/dynamiccollectors/ashrotzarim" },
+        summary: (nat === "IN" || nat === "LK") ? "Your passport isn't part of the ETA-IL scheme. You need a visa from an Israeli embassy or consulate before you travel." : "You need a visa from an Israeli embassy or consulate before you travel.",
+        checklist: visitorChecklist({ purpose: p, passport: IL_PASSPORT }),
+        warn: IL_MFA.has(nat) ? ["Your nationality's visa also needs approval from Israel's Foreign Ministry, which can take longer."] : undefined,
+        notes: ["The visa-exempt list we use dates from 2022. Confirm on gov.il before you travel."]
+      };
+    }
+  };
+
+  // =====================================================================
+  // ARGENTINA
+  // Sources (checked 2026-11-26):
+  //  https://argentina.travel/en/news/argentina-visa-who-needs-to-apply-for-tourism-travel-what-are-the-requirements-and-how-to-apply
+  //   (national tourism board: exempt and visa-required lists, 90 days extendable once)
+  //  https://www.argentina.gob.ar/servicio/obtener-visa-de-turista-para-ingresar-la-argentina (consular tourist visa US$150)
+  //  https://www.boletinoficial.gob.ar/detalleAviso/primera/328606/20250721 (Res. 316/2025: CN 30 days, DO 90 days with US visa)
+  //  https://www.boletinoficial.gob.ar/detalleAviso/primera/330397/20250827 (Res. 353/2025: IN 90 days with US visa)
+  //  https://eeeuu.cancilleria.gob.ar/en/node/84594 (AVE for holders of US visas, updated 01/06/2026)
+  //  https://www.argentina.gob.ar/servicio/obtener-una-residencia-temporaria-como-estudiante ; https://www.argentina.gob.ar/migraciones/cuadro-tasas-migratorias
+  //  https://www.gov.uk/foreign-travel-advice/argentina/entry-requirements (FCDO, 7 May 2026)
+  // UY, CU and ST are unclear on the lists, so they return "check". Transit rules couldn't be confirmed.
+  // =====================================================================
+  const AR_EXEMPT = S("DE AD AM AU AT BB BY BO BA BR BG CA CL VA CO KR CR HR DK DM EC SV AE SK SI ES US EE FI FJ FR GE GD GR GT GY HN HK HU IE IS IL IT JM JP KZ LV LI LT LU MO MK MY MT MX MC MN ME NI NO NZ NL PA PY PE PL PT QA GB CZ RO RU KN SM VC LC RS SG ZA SE CH SR TH TT TR UA VE CY");
+  const AR_US_VISA = { IN: "Up to 90 days", DO: "Up to 90 days", CN: "Up to 30 days" };
+  const AR_VISA = "https://www.argentina.gob.ar/servicio/obtener-visa-de-turista-para-ingresar-la-argentina";
+  const AR_AVE = "https://www.migraciones.gov.ar/ave/index.htm";
+
+  const AR = {
+    id: "AR", name: "Argentina", flag: "🇦🇷", verified: "2026-11-26",
+    links: [
+      ["Who needs a visa (Argentina.travel)", "https://argentina.travel/en/news/argentina-visa-who-needs-to-apply-for-tourism-travel-what-are-the-requirements-and-how-to-apply"],
+      ["Tourist visa (argentina.gob.ar)", AR_VISA],
+      ["AVE electronic travel authorisation", AR_AVE]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      if (nat === "AR") return { status: "citizen", summary: "Enter on your Argentine passport or DNI." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study longer than a short visit needs temporary residence as a student, applied for online through RADEX with Migraciones." : "Work needs temporary residence or an entry permit (permiso de ingreso) sponsored by your employer through Migraciones.",
+        auth: { name: p === "study" ? "Residencia temporaria (estudiante)" : "Residencia temporaria / permiso de ingreso", fee: "ARS 100,000 (non-MERCOSUR) or ARS 50,000 (MERCOSUR)", time: "Several weeks", url: p === "study" ? "https://www.argentina.gob.ar/servicio/obtener-una-residencia-temporaria-como-estudiante" : "https://www.argentina.gob.ar/migraciones/cuadro-tasas-migratorias" },
+        checklist: [item(p === "study" ? "Proof of enrolment" : "Job offer or contract", ""), item("Criminal record certificate", "Apostilled and translated into Spanish."), common.passport(), common.photo()]
+      };
+      if (p === "transit") return { status: "check", summary: "We couldn't confirm Argentina's transit rules on an official page. Ask your airline.", checklist: [common.passport()], links: [["Who needs a visa (Argentina.travel)", "https://argentina.travel/en/news/argentina-visa-who-needs-to-apply-for-tourism-travel-what-are-the-requirements-and-how-to-apply"]] };
+      if (["UY", "CU", "ST"].includes(nat)) return { status: "check", summary: "Your nationality isn't clearly listed on the official visa lists. Ask the Argentine consulate.", checklist: [common.passport()], links: [["Tourist visa (argentina.gob.ar)", AR_VISA]] };
+      if (AR_EXEMPT.has(nat)) return {
+        status: "free", stay: "Up to 90 days (extendable once)",
+        summary: "No visa needed for tourism or business visits.",
+        checklist: lightChecklist({ purpose: p, passport: "Valid for your whole stay." }),
+        notes: ["Passports are no longer stamped on arrival."]
+      };
+      if (AR_US_VISA[nat] && has(ctx, "visa:US") && (p === "tourism" || (nat === "CN" && p === "business"))) return {
+        status: "resident", stay: AR_US_VISA[nat],
+        summary: "With a valid US visa of a similar category you don't need an Argentine visa or the AVE.",
+        checklist: lightChecklist({ purpose: p, extra: [item("Valid US visa", "Must be valid when you arrive.")] })
+      };
+      return {
+        status: "visa",
+        auth: { name: "Tourist visa", fee: "US$150", time: "Consular interview required", url: AR_VISA },
+        summary: "You need a tourist visa from an Argentine consulate." + (nat === "CN" ? " Chinese citizens follow a separate bilateral process." : ""),
+        checklist: visitorChecklist({ purpose: p, passport: "Valid at least 6 months, with one blank page.", photoSpec: "Two 4x4 cm photos." }),
+        notes: ["If you hold a valid US visa (B1/B2 and some others) or an ESTA, you may qualify for the online AVE instead. Check the AVE nationality list."]
+      };
+    }
+  };
+
+  // =====================================================================
+  // COLOMBIA
+  // Sources (checked 2026-11-26):
+  //  https://cancilleria.gov.co/normograma/compilacion/docs/resolucion_minrelaciones_5488_2022.htm (Res. 5488/2022, consolidated:
+  //   Art. 3A visa-free list, Art. 3C US/Schengen visa or residence rule, Art. 4 Pacific Alliance PR, Art. 8 airport transit visa list)
+  //  https://cancilleria.gov.co/normograma/compilacion/docs/resolucion_minrelaciones_12189_2026.htm (Res. 12189/2026, in force 04-09-2026: current Art. 3A)
+  //  https://apps.migracioncolombia.gov.co/pre-registro/ (Check-MIG)
+  //  https://www.gov.uk/foreign-travel-advice/colombia/entry-requirements (FCDO, 23 Nov 2026: 90 days, extendable to 180 a year)
+  // Visa fees and processing times couldn't be read on cancilleria.gov.co.
+  // =====================================================================
+  const CO_FREE = S("AL DE AD AG AR AU AT AZ BS BB BE BZ BO BA BR BN BG BT CA CZ CL CY KR CR HR DK DM EC SV AE SK SI ES US EE FJ PH FI FR GE GD GR GT GY HN HU ID IE IS MH SB IL IT JM JP KZ LV LI LT LU MK MT MA MX FM MD MC ME NO NZ NL OM PW PA PG PY PE PL PT QA GB DO RO RU KN WS SM LC VA VC RS SG SE CH SR TT TR UA UY VE");
+  const CO_3C = S("KH IN NI MM CN TH TW VN"); // visa-free with US/Schengen residence, or a US/Schengen visa valid 180+ days on entry
+  const CO_ATV = S("AF AO BD BF CM CI EG ET ER GM GH HT IN IR KE LB ML NP NG PK SL SY SO LK SD TJ UZ");
+  const CO_VISA = "https://www.cancilleria.gov.co/en/tt_ss/4-apply-colombian-visa";
+  const CO_MIG = "https://apps.migracioncolombia.gov.co/pre-registro/";
+
+  const CO = {
+    id: "CO", name: "Colombia", flag: "🇨🇴", verified: "2026-11-26",
+    links: [
+      ["Visa exemptions (Res. 5488/2022)", "https://cancilleria.gov.co/normograma/compilacion/docs/resolucion_minrelaciones_5488_2022.htm"],
+      ["Colombian visas (Cancillería)", CO_VISA],
+      ["Check-MIG pre-registration", CO_MIG]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const mig = item("Check-MIG form", "Free. Fill in between 72 hours and 1 hour before your flight.", CO_MIG);
+      if (nat === "CO") return { status: "citizen", summary: "Enter on your Colombian passport." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: (p === "study" ? "Study" : "Work") + " needs a Migrant (M) or Visitor (V) visa from Cancillería, applied for online before you travel. Visas over 90 days must be registered with Migración Colombia within 15 days of arrival.",
+        auth: { name: p === "study" ? "Visitor visa (study) or Migrant visa" : "Migrant visa (M) for work", fee: "Varies", time: "Apply online", url: CO_VISA },
+        checklist: [item(p === "study" ? "Enrolment letter from a Colombian institution" : "Employment contract", ""), common.passport(), common.photo()]
+      };
+      const pa = has(ctx, "pr:PA");
+      const c3 = CO_3C.has(nat) && has(ctx, "pr:US", "pr:EU", "visa:US", "visa:SCHENGEN");
+      if (p === "transit") {
+        if (CO_ATV.has(nat) && !c3 && !pa) return {
+          status: "visa",
+          auth: { name: "Airport transit visa", fee: "Varies", time: "Apply online before travel", url: CO_VISA },
+          summary: "Your nationality needs an airport transit visa even to change planes in Colombia (up to 24 hours, same airport).",
+          checklist: [common.passport(), item("Onward ticket", "")]
+        };
+        return { status: "free", summary: "No transit visa needed to change planes. To leave the airport you need to meet the normal entry rules.", checklist: [common.passport(), item("Onward ticket", "")] };
+      }
+      if (CO_FREE.has(nat)) return {
+        status: "free", stay: "Up to 90 days (max 180 days a year)",
+        summary: "No visa needed for tourism or business visits without paid work.",
+        checklist: lightChecklist({ purpose: p, passport: "Valid on entry (6 months beyond departure recommended).", extra: [mig] }),
+        notes: ["San Andrés and Providencia need a separate tourist card.", "Yellow fever vaccination may be needed if arriving from a risk country or visiting some national parks."]
+      };
+      if (c3 || pa) return {
+        status: "resident", stay: "Up to 90 days",
+        summary: c3 ? "You don't need a Colombian visa because you hold US or Schengen residence, or a US or Schengen visa valid at least 180 more days." : "You don't need a Colombian visa as a permanent resident of a Pacific Alliance country (Chile, Mexico or Peru).",
+        checklist: lightChecklist({ purpose: p, extra: [item(c3 ? "US or Schengen visa or residence permit" : "Permanent residence card", c3 ? "A visa must be valid at least 180 days on the day you arrive." : ""), mig] })
+      };
+      return {
+        status: "visa",
+        auth: { name: "Visitor visa (V)", fee: "Varies", time: "Apply online before travel", url: CO_VISA },
+        summary: "You need a Colombian visa before you travel. Apply online through Cancillería." + (CO_3C.has(nat) ? " A US or Schengen visa valid 180+ days, or US/Schengen residence, would let you enter without one." : ""),
+        checklist: visitorChecklist({ purpose: p, extra: [mig] })
+      };
+    }
+  };
+
+  // =====================================================================
+  // PERU
+  // Sources (checked 2026-11-26):
+  //  RREE visa table of 16-07-2026 (PE_TABLE below) could not be fetched (blocked)
+  //  https://busquedas.elperuano.pe/dispositivo/NL/1423003-3 (DS 069-2016-RE: CN visa-free with US/CA/UK/AU/Schengen visa (6 months) or PR, 180 days)
+  //  https://busquedas.elperuano.pe/dispositivo/NL/1493143-11 (India: same conditions, 06-03-2017)
+  //  https://elperuano.pe/normaselperuano/2016/07/24/1408499-13.html (DS 061-2016-RE: PR of CO, CL or MX visa-free, 180 days)
+  //  https://busquedas.elperuano.pe/dispositivo/NL/2278394-1 (DS 012-2024-RE: Mexico, 183 days a year)
+  //  https://www.gov.uk/foreign-travel-advice/peru/entry-requirements (FCDO, 26 Nov 2026: 90 in 180, max 183 in 365, passport 6 months)
+  // The full official country table couldn't be read, so other nationalities return "check".
+  // =====================================================================
+  const PE_TABLE = "https://cdn.www.gob.pe/uploads/document/file/3284513/2315744-exoneracion-de-visas-pas-ordinario-16-07-2026-v2.pdf";
+  const PE_PASSPORT = "Valid at least 6 months from arrival.";
+  const PE = {
+    id: "PE", name: "Peru", flag: "🇵🇪", verified: "2026-11-26",
+    links: [
+      ["Visa requirements by country (RREE)", PE_TABLE],
+      ["Tourist visa (gob.pe)", "https://www.gob.pe/en/36240-apply-for-a-tourist-visa-to-enter-peru"],
+      ["Visas by migratory status (gob.pe)", "https://www.gob.pe/12830-solicitud-de-visa-temporal-segun-calidad-migratoria"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      if (nat === "PE") return { status: "citizen", summary: "Enter on your Peruvian passport or DNI." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: (p === "study" ? "Study" : "Work") + " needs a temporary or resident migratory status (calidad migratoria) from Migraciones" + (p === "work" ? " as a temporary or resident worker." : " for training (formación)."),
+        auth: { name: p === "study" ? "Calidad migratoria de formación" : "Calidad migratoria trabajador", fee: "Varies", time: "Apply before or after arrival", url: p === "study" ? "https://www.gob.pe/12918-solicitud-de-visa-temporal-segun-calidad-migratoria-solicitar-calidad-migratoria-temporal-por-formacion" : "https://www.gob.pe/12917-solicitud-de-visa-temporal-segun-calidad-migratoria-solicitar-calidad-migratoria-para-trabajador-temporal" },
+        checklist: [item(p === "study" ? "Enrolment letter from a Peruvian institution" : "Employment contract", ""), common.passport(PE_PASSPORT), common.photo()]
+      };
+      if (p === "transit") return { status: "check", summary: "We couldn't confirm Peru's transit rules on an official page. Transit passengers at Lima pay the TUUA airport fee.", checklist: [common.passport(PE_PASSPORT)], links: [["Visa requirements by country (RREE)", PE_TABLE]] };
+      if (nat === "GB") return { status: "free", stay: "Up to 90 days in 180 (max 183 days a year)", summary: "British citizens don't need a visa for tourist visits.", checklist: lightChecklist({ purpose: p, passport: PE_PASSPORT }), notes: ["Your entry is recorded electronically (virtual TAM). Keep your boarding pass."] };
+      if (nat === "MX") return { status: "free", stay: "Up to 183 days a year", summary: "Mexican citizens don't need a visa for tourism (DS 012-2024-RE).", checklist: lightChecklist({ purpose: p, passport: PE_PASSPORT }) };
+      if ((nat === "CN" || nat === "IN") && (p === "tourism" || p === "business") && has(ctx, "visa:US", "visa:CA", "visa:GB", "visa:AU", "visa:SCHENGEN", "pr:US", "pr:CA", "pr:GB", "pr:AU", "pr:EU")) return {
+        status: "resident", stay: "Up to 180 days in 6 months",
+        summary: "You don't need a Peruvian visa because you hold a US, Canadian, UK, Australian or Schengen visa (valid 6+ months) or permanent residence there.",
+        checklist: lightChecklist({ purpose: p, passport: PE_PASSPORT, extra: [item("Qualifying visa or residence card", "A visa must be valid at least 6 months.")] })
+      };
+      if (has(ctx, "pr:PA") && p === "tourism") return {
+        status: "resident", stay: "Up to 180 days in 6 months",
+        summary: "As a permanent resident of Colombia, Chile or Mexico you don't need a Peruvian tourist visa (DS 061-2016-RE).",
+        checklist: lightChecklist({ purpose: p, passport: PE_PASSPORT, extra: [item("Permanent residence card", "")] })
+      };
+      return {
+        status: "check",
+        summary: (nat === "CN" || nat === "IN") ? "You need a visa, unless you hold a US, Canadian, UK, Australian or Schengen visa (valid 6+ months) or residence there." : "We couldn't read Peru's official visa table for your nationality. Many nationalities are visa-free for up to 90 or 183 days. Check the RREE table.",
+        checklist: [common.passport(PE_PASSPORT)],
+        links: [["Visa requirements by country (RREE)", PE_TABLE], ["Tourist visa (gob.pe)", "https://www.gob.pe/en/36240-apply-for-a-tourist-visa-to-enter-peru"]]
+      };
+    }
+  };
+
+  // =====================================================================
+  // CHILE
+  // Sources (checked 2026-11-26):
+  //  https://www.consulado.gob.cl/cuadro-de-visas-y-aranceles-de-chile (fee table PDF cuadro_de_visas_corregido060326.pdf, DS 296/2021:
+  //   visa required list, fees, footnotes on US/Canada visa exemptions for CN, IN, DO)
+  //  https://www.chile.gob.cl/blog/visas ; https://www.consulado.gob.cl/informacion-sobre-visas-para-ingresar-a-chile (Permiso de Permanencia Transitoria, 90 days)
+  //  https://tramites.minrel.gov.cl/ (online visa applications)
+  //  https://www.gov.uk/foreign-travel-advice/chile/entry-requirements (FCDO, 25 Nov 2026)
+  // DM SC PW WS TV FM showed "visa required" in a garbled extraction, so they return "check". Transit couldn't be confirmed.
+  // =====================================================================
+  const CL_VISA = S("AF AO SA DZ AM AZ BH BD BY BJ BT BW BN BF BI CV KH CM TD CN CD CG KP CI CU DJ EG ER SZ ET PH GA GM GH GN GW GQ HT IN IQ IR KM MH SB JO KZ KE KG KI XK KW LA LS LB LR LY MG MW MV ML MA MR MZ MM NA NR NP NE NG OM PK PS PG CF DO RW ST SN SL SY SO LK SD SS TZ TJ TL TG TN TM UG UZ VU VE YE ZM ZW");
+  const CL_UNCLEAR = S("DM SC PW WS TV FM");
+  const CL_FEE = { IN: "US$42 (single) / US$76 (multiple)", NG: "US$200", CU: "US$15", PK: "US$122" };
+  const CL_STAY = { BZ: "Up to 30 days", MO: "Up to 30 days", SR: "Up to 60 days (single entry)" };
+  const CL_APPLY = "https://tramites.minrel.gov.cl/";
+
+  const CL = {
+    id: "CL", name: "Chile", flag: "🇨🇱", verified: "2026-11-26",
+    links: [
+      ["Visa and fee table (consulado.gob.cl)", "https://www.consulado.gob.cl/cuadro-de-visas-y-aranceles-de-chile"],
+      ["Apply for a visa (Minrel)", CL_APPLY],
+      ["Servicio Nacional de Migraciones", "https://serviciomigraciones.cl/"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      if (nat === "CL") return { status: "citizen", summary: "Enter on your Chilean passport or ID." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: "Study or work beyond a short visit needs temporary residence from the Servicio Nacional de Migraciones. Visitors can't do paid work.",
+        auth: { name: "Temporary residence (residencia temporal)", fee: "Varies", time: "Apply online", url: "https://tramites.serviciomigraciones.cl/" },
+        checklist: [item(p === "study" ? "Enrolment letter from a Chilean institution" : "Employment contract", ""), common.passport(), common.photo()],
+        notes: ["Working Holiday agreements exist with some countries: consulado.gob.cl/servicios/acuerdos-working-holiday."]
+      };
+      if (p === "transit") return { status: "check", summary: "We couldn't confirm Chile's transit rules on an official page. Ask your airline.", checklist: [common.passport()], links: [["Information on visas (consulado.gob.cl)", "https://www.consulado.gob.cl/informacion-sobre-visas-para-ingresar-a-chile"]] };
+      if (CL_UNCLEAR.has(nat)) return { status: "check", summary: "We couldn't read Chile's official table clearly for your nationality. Check the consulate's visa table.", checklist: [common.passport()], links: [["Visa and fee table (consulado.gob.cl)", "https://www.consulado.gob.cl/cuadro-de-visas-y-aranceles-de-chile"]] };
+      const tc = item("Tourist card (tarjeta de turismo)", "Given on arrival. Keep it until you leave.");
+      if (!CL_VISA.has(nat)) return {
+        status: "free", stay: CL_STAY[nat] || "Up to 90 days",
+        summary: "No visa needed for tourism or business visits.",
+        checklist: lightChecklist({ purpose: p, passport: "Valid beyond your departure date.", extra: [tc] }),
+        notes: ["Easter Island (Rapa Nui) has its own entry form."]
+      };
+      const cnOk = nat === "CN" && has(ctx, "visa:US", "visa:CA", "pr:US");
+      const inOk = (nat === "IN" || nat === "DO") && has(ctx, "visa:US", "pr:US");
+      if (cnOk || inOk) return {
+        status: "resident", stay: "Up to 90 days",
+        summary: "You don't need a Chilean visa because you hold a " + (nat === "CN" ? "US or Canadian" : "US") + " visa or a US Green Card, valid at least 6 more months.",
+        checklist: lightChecklist({ purpose: p, extra: [item("Qualifying visa or Green Card", "Valid at least 6 months. Transit (C) visas don't count."), tc] })
+      };
+      return {
+        status: "visa",
+        auth: { name: "Tourist visa (permanencia transitoria)", fee: CL_FEE[nat] || "Varies by nationality", time: "Apply online, then consulate", url: CL_APPLY },
+        summary: "You need a visa before you travel. Apply online through Minrel's consular system.",
+        checklist: visitorChecklist({ purpose: p }),
+        notes: nat === "CN" ? ["A US or Canadian visa (not C or transit) or a US Green Card valid 6+ months exempts you."] : (nat === "DO") ? ["A US visa (not C) or Green Card valid 6+ months exempts you."] : undefined
+      };
+    }
+  };
+
+  // =====================================================================
+  // COSTA RICA
+  // Sources (checked 2026-11-26):
+  //  https://uned.ac.cr/planificacion/dic/images/internacionalizacion/DIRECTRICES_GENERALES_DE_VISAS_DE_INGRESO_Y_PERMANENCIA_PARA_NO_RESIDENTES_DG-55-03-2023.pdf
+  //   (DGME directive DG-55-03-2023: groups 1 to 4, US/Canada and EU/UK residence exemption, airport transit visa list)
+  //  https://oaice.ucr.ac.cr/sites/default/files/2025-11/06.%20Informaci%C3%B3n%20de%20visas%20de%20ingreso%20y%20permanencia%20para%20no%20residentes%20en%20Costa%20Rica_1.pdf
+  //   (UCR summary of directive AJ-484-11-2025: group 1 now 180 days, group 2 30 days)
+  //  https://www.gov.uk/foreign-travel-advice/costa-rica/entry-requirements (FCDO, 25 Nov 2026: UK up to 180 days, yellow fever)
+  // The November 2025 directive itself couldn't be read (migracion.go.cr blocked). MR and PK reportedly moved to group 4: "check".
+  // =====================================================================
+  const CR_G1 = S("DE AD AR AU AT BS BB BE BR BG CA HR CL CY DK AE SK SI ES QA US EE FI FR HU IE IS IL IT JP LV LI LT LU MT MX ME NO NZ NL PA PY PL PT MC SM PE RS ZA GB CZ KR GR RO VA SG SE CH TT UA UY");
+  const CR_G2 = S("AG BZ BO DM SV BN RU PH FJ GD GT GY HN MH SB KI MY MV MU FM NR PW TO WS KN VC LC ST SC SR TW TV TR VU");
+  const CR_G4 = S("AF AZ BD CU ER ET HT KZ KG IR IQ JM MM PS SY KP SO LK TJ TM UZ");
+  const CR_ATV = S("AZ CM CU HT IN KZ KG NI TJ TM UZ VE");
+  const CR_VISAS = "https://migracion.go.cr/visas/";
+
+  const CR = {
+    id: "CR", name: "Costa Rica", flag: "🇨🇷", verified: "2026-11-26",
+    links: [
+      ["Visas (Migración Costa Rica)", CR_VISAS],
+      ["Visa directive DG-55-03-2023", "https://uned.ac.cr/planificacion/dic/images/internacionalizacion/DIRECTRICES_GENERALES_DE_VISAS_DE_INGRESO_Y_PERMANENCIA_PARA_NO_RESIDENTES_DG-55-03-2023.pdf"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const yf = "Yellow fever certificate needed if arriving from a country with transmission risk.";
+      if (nat === "CR") return { status: "citizen", summary: "Enter on your Costa Rican passport." };
+      if (p === "study" || p === "work") return {
+        status: "check",
+        summary: "Study or work needs a residence or special category from the Dirección General de Migración y Extranjería. We couldn't confirm the names and fees on an official page.",
+        checklist: [common.passport()],
+        links: [["Migración Costa Rica", "https://migracion.go.cr/"]]
+      };
+      if (nat === "MR" || nat === "PK") return { status: "check", summary: "Your nationality's visa group may have changed in the November 2025 directive. Ask the Costa Rican consulate.", checklist: [common.passport()], links: [["Visas (Migración Costa Rica)", CR_VISAS]] };
+      const usca = has(ctx, "pr:US", "pr:CA", "visa:US", "visa:CA");
+      const eu = has(ctx, "pr:EU", "pr:GB");
+      if (p === "transit") {
+        if (CR_ATV.has(nat) && !usca && !eu) return { status: "visa", auth: { name: "Airport transit visa", fee: "Varies", time: "Apply at a consulate", url: CR_VISAS }, summary: "Your nationality needs a transit visa even to change planes in Costa Rica.", checklist: [common.passport(), item("Onward ticket and visa for final destination", "")] };
+        return { status: "free", summary: "No transit visa needed to change planes. To leave the airport you must meet the normal entry rules.", checklist: [common.passport(), item("Onward ticket", "")] };
+      }
+      const entry = [item("Proof of funds", "At least US$100 per month of stay."), common.ticket()];
+      if (CR_G1.has(nat)) return {
+        status: "free", stay: "Up to 180 days (officer decides)",
+        summary: "No visa needed. The officer decides how many days you get, up to 180.",
+        checklist: [common.passport("Valid at least 1 day beyond your stay."), ...entry, common.stay()],
+        notes: [yf, "Overstaying costs US$100 per month and can lead to an entry ban."]
+      };
+      if (CR_G2.has(nat)) return {
+        status: "free", stay: "Up to 30 days (extendable to 90)",
+        summary: "No visa needed for stays of up to 30 days.",
+        checklist: [common.passport("Valid at least 90 days from arrival."), ...entry, common.stay()],
+        notes: [yf]
+      };
+      if (usca || eu) return {
+        status: "resident", stay: "Up to 30 days",
+        summary: "You don't need a Costa Rican visa because you hold " + (usca ? "a multiple-entry US or Canadian visa, or residence there," : "EU, Schengen or UK residence") + " valid at least 90 days from arrival.",
+        checklist: [common.passport("Valid at least 6 months from arrival."), item(usca ? "Multiple-entry US or Canadian visa or residence" : "Residence permit allowing multiple entries", "Valid at least 90 days from arrival. US C1/C2/C3 transit visas don't count."), ...entry],
+        warn: ["The November 2025 directive reportedly relaxed these validity rules. We couldn't read it, so we show the stricter 2023 rule."],
+        notes: [yf]
+      };
+      return {
+        status: "visa",
+        auth: { name: CR_G4.has(nat) ? "Restricted visa (visa restringida)" : "Consular visa", fee: "Varies", time: CR_G4.has(nat) ? "Approved by the Restricted Visa Commission" : "Apply at a consulate", url: CR_VISAS },
+        summary: CR_G4.has(nat) ? "Your nationality needs a restricted visa, approved in advance by Costa Rica's Restricted Visa Commission." : "You need a visa from a Costa Rican consulate before you travel.",
+        checklist: visitorChecklist({ purpose: p, passport: "Valid at least 6 months from arrival." }),
+        notes: [yf, "Holders of a US or Canadian multiple-entry visa, or EU/UK residence, may be exempt."]
+      };
+    }
+  };
+
+  // =====================================================================
+  // DOMINICAN REPUBLIC
+  // Sources (checked 2026-11-26):
+  //  https://servicios360.mirex.gob.do/visas/ (MIREX, 13 Apr 2026: visa types; Decree 691-07 exemption for US/Canada/UK/Schengen visa or PR)
+  //  https://www.godominicanrepublic.com/travel/entry-requirements and /travel/faqs (Ministry of Tourism: examples of visa-free
+  //   nationalities, eTicket, yellow fever rules)
+  //  https://migracion.gob.do/en/dgm-announces-extension-simplifying-entry-for-tourists-starting-december-1st/ (DGM, passport rule to 31 Dec 2026)
+  //  https://www.gov.uk/foreign-travel-advice/dominican-republic/entry-requirements (FCDO, 12 Nov 2026: 30 days, extendable to 120)
+  // The full visa-exempt list (MIREX interactive checker) couldn't be read, so only nationalities named by the government are "free".
+  // =====================================================================
+  const DO_FREE = union(EU, S("US CA GB RU UA KZ MX JP IL"));
+  const DO_ET = "https://eticket.migracion.gob.do/";
+  const DO_CHECKER = "https://consultas.mirex.gob.do/servicios/visas/consulta-de-requisitos-para-extranjeros-ingresar-a-la-republica-dominicana";
+
+  const DO = {
+    id: "DO", name: "Dominican Republic", flag: "🇩🇴", verified: "2026-11-26",
+    links: [
+      ["Visa requirements checker (MIREX)", DO_CHECKER],
+      ["eTicket entry form (official)", DO_ET],
+      ["Visa types (MIREX)", "https://servicios360.mirex.gob.do/visas/"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid for your whole stay until 31 Dec 2026 for US, Canada, UK, EU, AR, BR, CL, CO and EC citizens and holders of their visas; otherwise at least 6 months.";
+      const et = item("eTicket (entry and exit form)", "Free and mandatory for flights. Complete before check-in.", DO_ET);
+      const yf = "Yellow fever certificate needed if arriving from Venezuela or some Brazilian states.";
+      if (nat === "DO") return { status: "citizen", summary: "Enter on your Dominican passport." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a student visa (E) from a Dominican consulate." : "Work needs a business visa with labour purposes (NM1). Your job offer must be registered with the Ministry of Labour, and you register with Migración within 30 days of arrival.",
+        auth: { name: p === "study" ? "Student visa (E)" : "Business visa with labour purposes (NM1)", fee: "See consular fees", time: "10 to 20 business days", url: "https://servicios360.mirex.gob.do/visas/" },
+        checklist: [item(p === "study" ? "Admission letter" : "Job offer registered with the Ministry of Labour", ""), item("Police and medical certificates", ""), common.passport("Valid at least 6 months."), common.photo()]
+      };
+      if (p === "transit") return { status: "check", summary: "We couldn't confirm the Dominican Republic's transit rules on an official page. Ask your airline.", checklist: [common.passport()], links: [["Visa requirements checker (MIREX)", DO_CHECKER]] };
+      if (DO_FREE.has(nat)) return {
+        status: "free", stay: "30 days (longer stays pay a fee on departure)",
+        summary: "No visa needed for tourism. The tourist card is included in most air fares.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [et] }),
+        notes: [yf]
+      };
+      if (p === "tourism" && has(ctx, "pr:US", "pr:CA", "pr:GB", "pr:EU", "visa:US", "visa:CA", "visa:GB", "visa:SCHENGEN")) return {
+        status: "resident",
+        summary: "You don't need a Dominican visa for tourism because you hold permanent residence or a valid multiple-entry visa from the US, Canada, the UK or a Schengen country (Decree 691-07).",
+        checklist: lightChecklist({ purpose: p, passport, extra: [item("Multiple-entry visa or residence card", "Must be valid."), et] }),
+        notes: [yf]
+      };
+      return {
+        status: "check",
+        summary: "We couldn't confirm your nationality on the official visa list. Use MIREX's checker or ask a Dominican consulate. A US, Canada, UK or Schengen multiple-entry visa or residence lets you visit without a visa.",
+        checklist: [common.passport(passport), et],
+        links: [["Visa requirements checker (MIREX)", DO_CHECKER]]
+      };
+    }
+  };
+
+  // =====================================================================
+  // JAMAICA
+  // Sources (checked 2026-11-26):
+  //  https://embwashington.mfaft.gov.jm/pdf/Country-Listing-March-3-2025.pdf (PICA/MFAFT country listing, updated 13 Mar 2025)
+  //  https://www.embwashington.mfaft.gov.jm/visitor_to_jamaica (passport 6 months, 72-hour transit, processing 10 to 15 business days)
+  //  https://jca.gov.jm/individual/passenger/ and https://jis.gov.jm/major-uptick-in-use-of-online-c5-form/ (C5 form, enterjamaica.gov.jm)
+  //  https://www.mlss.gov.jm/departments/work-permit/ ; https://missions.mfaft.gov.jm/congenmiami/?p=33827 (students)
+  //  https://www.gov.uk/foreign-travel-advice/jamaica/entry-requirements (FCDO, 6 May 2026: yellow fever)
+  // WS, AE, SV and GT read inconsistently in the PDF, so they return "check".
+  // =====================================================================
+  const JM_COMMON = S("AG AU BS BD BB BZ BN BW CA CY DM FJ GM GH GD GY IN KE KI LS MW MY MT MU MZ NA NR NZ PG KN LC VC SC SL SG SB ZA SZ TO TT TV UG GB TZ VU ZM SR");
+  const JM_90 = S("BE BR CL DK FI DE IS IE IL IT KR LI LU MX NL NO RU SM ES SE CH TR");
+  const JM_30 = S("AR AT CN HK MO CO CR CZ EC FR GR HU JP MC PA PL PT SK UA UY VE");
+  const JM_COND_VISA = S("AL BY BA BG HR KZ MK MD ME RO RS HN"); // US/CA/UK/Schengen visa + vaccination proof
+  const JM_COND_VAX = S("EE LV LT SI");
+  const JM_COND_YF = S("BO PY PE");
+  const JM_POE = S("AD AM AZ GE KG TJ TM UZ XK PS TW");
+  const JM_UNCLEAR = S("WS AE SV GT");
+  const JM_C5 = "https://enterjamaica.gov.jm/";
+  const JM_LIST = "https://embwashington.mfaft.gov.jm/pdf/Country-Listing-March-3-2025.pdf";
+
+  const JM = {
+    id: "JM", name: "Jamaica", flag: "🇯🇲", verified: "2026-11-26",
+    links: [
+      ["Visa requirements by country (MFAFT)", JM_LIST],
+      ["C5 immigration and customs form", JM_C5],
+      ["Visiting Jamaica (Embassy Washington)", "https://www.embwashington.mfaft.gov.jm/visitor_to_jamaica"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months, with 2 blank pages.";
+      const c5 = item("C5 form", "Free and mandatory. Fill it in at enterjamaica.gov.jm. Don't pay look-alike sites.", JM_C5);
+      const yf = "Yellow fever certificate needed if arriving from a country with transmission risk.";
+      if (nat === "JM") return { status: "citizen", summary: "Enter on your Jamaican passport." };
+      if (p === "work") return {
+        status: "permit",
+        summary: "Your employer applies for a work permit from the Ministry of Labour and Social Security. Commonwealth citizens need one too. Non-Commonwealth citizens also need a work visa.",
+        auth: { name: "Work permit", fee: "Paid after approval", time: "Employer applies", url: "https://www.mlss.gov.jm/departments/work-permit/" },
+        checklist: [item("Job offer", ""), common.passport(passport), common.photo()]
+      };
+      if (p === "transit") {
+        if (nat === "CU") return { status: "visa", summary: "Cuban passport holders need a visa even to transit Jamaica.", auth: { name: "Transit visa", fee: "US$35", time: "10 to 15 business days", url: "https://www.embwashington.mfaft.gov.jm/visitor_to_jamaica" }, checklist: [common.passport(passport), item("Confirmed onward ticket", "")] };
+        return { status: "free", summary: "No transit visa needed for stays of up to 72 hours with a confirmed onward ticket.", checklist: [common.passport(passport), item("Confirmed onward ticket", "")] };
+      }
+      if (JM_UNCLEAR.has(nat)) return { status: "check", summary: "The official country list isn't clear for your nationality. Ask the Jamaican embassy.", checklist: [common.passport(passport), c5], links: [["Visa requirements by country (MFAFT)", JM_LIST]] };
+      const study = p === "study" ? [item("Acceptance letter and funds for one year", "Students over 16 register as aliens with PICA after arrival.")] : [];
+      const free = (stay, extra, cond) => ({
+        status: "free", stay,
+        summary: (cond || "No visa needed.") + (p === "study" ? " Students also need an acceptance letter and must register with PICA." : " The immigration officer decides your length of stay."),
+        checklist: lightChecklist({ purpose: p, passport, extra: [...(extra || []), ...study, c5] }),
+        notes: [yf]
+      });
+      if (JM_COMMON.has(nat)) return free(nat === "ZA" ? "Up to 90 days" : nat === "GB" ? "Usually up to 90 days" : "Officer decides");
+      if (nat === "US") return free("Up to 6 months");
+      if (nat === "DO") return free("Up to 180 days");
+      if (JM_90.has(nat)) return free("Up to 90 days");
+      if (JM_30.has(nat) && !(nat === "CN" && p !== "tourism")) return free("Up to 30 days", [], nat === "CN" ? "No visa needed for tourism of up to 30 days." : undefined);
+      const shortTrip = p === "tourism";
+      if (shortTrip && JM_COND_VAX.has(nat)) return free("Up to 30 days", [item("Proof of measles, rubella and polio vaccination", "")], "No visa needed for tourism of up to 30 days.");
+      if (shortTrip && JM_COND_YF.has(nat)) return free("Up to 30 days", [item("Yellow fever vaccination certificate", "")], "No visa needed for tourism of up to 30 days.");
+      if (shortTrip && JM_COND_VISA.has(nat) && has(ctx, "visa:US", "visa:CA", "visa:GB", "visa:SCHENGEN")) return {
+        status: "resident", stay: "Up to 30 days",
+        summary: "You don't need a visa for tourism of up to 30 days because you hold a US, Canadian, UK or Schengen visa.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [item("Valid US, Canadian, UK or Schengen visa", ""), item("Proof of measles, rubella and polio vaccination", ""), c5] })
+      };
+      if (nat === "HT" && p === "business" && has(ctx, "visa:US", "visa:CA", "visa:GB", "visa:SCHENGEN")) return {
+        status: "resident", summary: "Bona fide Haitian business travellers with a valid US, Canadian, UK or Schengen visa don't need a Jamaican visa.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [item("Valid US, Canadian, UK or Schengen visa", ""), c5] })
+      };
+      if (JM_POE.has(nat) && p !== "study") return {
+        status: "voa",
+        summary: "Your visa is issued on arrival in Jamaica." + (["XK", "PS", "TW"].includes(nat) ? " You also need an Affidavit of Identity." : ""),
+        checklist: lightChecklist({ purpose: p, passport, extra: [...(["XK", "PS", "TW"].includes(nat) ? [item("Affidavit of Identity", "", "https://www.embwashington.mfaft.gov.jm/pdf/affidavit_of_identity.pdf")] : []), c5] }),
+        notes: [yf]
+      };
+      const fee = { NG: "US$20", PK: "US$80", PH: "US$25", CU: "US$35", VN: "US$40", EG: "US$25", CM: "US$20", HT: "US$18", CN: "US$60" }[nat];
+      return {
+        status: "visa",
+        auth: { name: "Visa (apply before arrival)", fee: fee ? fee + " + US$15 consular fee" : "Varies by nationality", time: "10 to 15 business days (apply 3 to 6 weeks ahead)", url: "https://www.embwashington.mfaft.gov.jm/visitor_to_jamaica" },
+        summary: "You need a visa from a Jamaican embassy or consulate before you travel.",
+        checklist: visitorChecklist({ purpose: p, passport, extra: [...study, c5] }),
+        notes: [yf]
+      };
+    }
+  };
+
+  // =====================================================================
+  // CUBA
+  // Sources (checked 2026-11-26):
+  //  https://www.gov.uk/foreign-travel-advice/cuba/entry-requirements (FCDO, 26 Nov 2026: tourist card / e-Visa before travel,
+  //   D'Viajeros within 72 hours, passport 6 months after arrival and 3 months after departure)
+  //  https://travel.gc.ca/destinations/cuba (Government of Canada, 5 Oct 2026: e-Visa, 90 days extendable, medical insurance)
+  //  https://travel.state.gov/content/travel/en/international-travel/International-Travel-Country-Information-Pages/Cuba.html (OFAC rules for US citizens)
+  //  https://cubaminrex.cu/sites/default/files/2019-08/Visa%20Waiver%20Agreements%202018.pdf (MINREX visa-waiver list, 2018: too old to rely on)
+  // No Cuban government site could be read, so only GB and CA (confirmed by their governments) get a full answer.
+  // =====================================================================
+  const CU_DV = "https://dviajeros.mitrans.gob.cu/";
+  const CU = {
+    id: "CU", name: "Cuba", flag: "🇨🇺", verified: "2026-11-26",
+    links: [
+      ["D'Viajeros arrival form (official)", CU_DV],
+      ["Cuban consulates (MINREX)", "https://misiones.cubaminrex.cu/"],
+      ["Cuba entry requirements (UK FCDO)", "https://www.gov.uk/foreign-travel-advice/cuba/entry-requirements"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months after arrival.";
+      const dv = item("D'Viajeros form", "Free. Complete within 72 hours before arrival and show the QR code.", CU_DV);
+      const ins = item("Travel medical insurance", "Mandatory. Bring proof; otherwise you may have to buy Cuban insurance on arrival.");
+      if (nat === "CU") return { status: "citizen", summary: "Enter on your Cuban passport." };
+      if (nat === "US" && p !== "transit") return {
+        status: "check",
+        summary: "US law (OFAC) doesn't allow tourism in Cuba. Travel must fit one of 12 authorised categories. You also need a Cuban visa or tourist card, D'Viajeros and non-US medical insurance (usually in the ticket from the US).",
+        checklist: [common.passport("Valid at least 6 months, with 2 blank pages."), dv, ins],
+        links: [["Cuba travel (travel.state.gov)", "https://travel.state.gov/content/travel/en/international-travel/International-Travel-Country-Information-Pages/Cuba.html"]]
+      };
+      if ((nat === "GB" || nat === "CA") && (p === "tourism")) return {
+        status: "evisa", stay: "Up to 90 days (extendable in Cuba)",
+        auth: { name: "Tourist card (e-Visa)", fee: "Varies by seller", time: "Get it before you travel", url: "https://tramites.consular.cu/" },
+        summary: "You need a tourist card (now usually an e-Visa) before you travel. Get it from the Cuban embassy, your tour operator or airline, or the official e-Visa portal." + (nat === "CA" ? " It's usually included in packages and direct flights from Canada." : ""),
+        checklist: lightChecklist({ purpose: p, passport: nat === "GB" ? passport + " Also valid 3 months after you leave." : passport, auth: item("Tourist card / e-Visa code", "A 10-character code you enter on D'Viajeros."), extra: [dv, ins] }),
+        notes: ["Yellow fever certificate needed if arriving from a risk country."]
+      };
+      return {
+        status: "check",
+        summary: p === "tourism" ? "Most visitors need a tourist card (e-Visa) before travel, and some nationalities need a consular visa. We couldn't read Cuba's official list. Ask a Cuban consulate." : "We couldn't confirm Cuba's rules for this purpose on an official page. Ask a Cuban consulate.",
+        checklist: [common.passport(passport), dv, ins],
+        links: [["Cuban consulates (MINREX)", "https://misiones.cubaminrex.cu/"]]
+      };
+    }
+  };
+
+  // =====================================================================
+  // KENYA
+  // Sources (checked 2026-11-26):
+  //  https://www.etakenya.go.ke/general-information (exempt nationalities: EAC 180 days, 90-day and 60-day lists; transit)
+  //  https://www.etakenya.go.ke/faqs (eTA from US$30, about 3 working days, apply 2 weeks ahead)
+  //  https://berlin.mfa.go.ke/news/mandatory-inbound-travel-health-insurance-for-travellers-to-kenya (from 5 Oct 2026, up to US$44)
+  //  https://immigration.go.ke/students-pass/ (US$100 a year) ; https://fns.immigration.go.ke/infopack/permits/classD/ (Class D, KES 20,000)
+  //  https://www.gov.uk/foreign-travel-advice/kenya/entry-requirements (FCDO, 6 Nov 2026)
+  // =====================================================================
+  const KE_EAC = S("BI CD RW SS TZ UG");
+  const KE_90 = S("BB BZ BW BN CY DM ER SZ ET FJ GM GH GD GY JM KI LS MY MV MW MU MZ NA NR PG KM WS SM SL SG SB ZA KN LC VC BS TO TT CG TV VU ZM ZW");
+  const KE_60 = S("DZ AO BJ BF CV CM CF TD CI DJ EG GQ GA GN GW LR MG ML MR MA NE NG ST SN SC SD TG TN");
+  const KE_ETA = "https://www.etakenya.go.ke/";
+
+  const KE = {
+    id: "KE", name: "Kenya", flag: "🇰🇪", verified: "2026-11-26",
+    links: [
+      ["Kenya eTA (official)", KE_ETA],
+      ["Who is exempt (eTA Kenya)", "https://www.etakenya.go.ke/general-information"],
+      ["Department of Immigration Services", "https://immigration.go.ke/"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months, with 2 blank pages.";
+      const ins = item("Kenyan travel health insurance", "Mandatory since 5 Oct 2026: buy the government policy (up to US$44) at etakenya.go.ke. Foreign policies aren't accepted.", KE_ETA);
+      const yf = "Yellow fever certificate needed if arriving from a risk country.";
+      if (nat === "KE") return { status: "citizen", summary: "Enter on your Kenyan passport or ID." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a Student's Pass from the Department of Immigration Services." : "Work needs a work permit (Class D for employment), applied for online through eFNS.",
+        auth: { name: p === "study" ? "Student's Pass" : "Work Permit Class D", fee: p === "study" ? (KE_EAC.has(nat) ? "Free for EAC citizens" : "US$100 a year") : "KES 20,000 processing + issue fee", time: "Apply before travel", url: p === "study" ? "https://immigration.go.ke/students-pass/" : "https://fns.immigration.go.ke/infopack/permits/classD/" },
+        checklist: [item(p === "study" ? "Letter from a Kenyan institution" : "Job offer and contract", ""), item("Police clearance", ""), common.passport(passport), common.photo()]
+      };
+      if (p === "transit") return { status: "free", summary: "No eTA needed if you stay on the plane or transfer without leaving the airport.", checklist: [common.passport(passport), item("Onward boarding pass", "Stay airside.")] };
+      if (KE_EAC.has(nat)) return { status: "free", stay: "Up to 180 days", summary: "East African Community citizens don't need a visa or eTA.", checklist: lightChecklist({ purpose: p, passport }), notes: [yf] };
+      const stay = KE_90.has(nat) ? "Up to 90 days" : KE_60.has(nat) ? "Up to 60 days" : null;
+      if (stay) return { status: "free", stay, summary: "No visa or eTA needed, but you must buy Kenya's mandatory travel health insurance.", checklist: lightChecklist({ purpose: p, passport, extra: [ins] }), notes: [yf] };
+      return {
+        status: "eta", stay: "As shown on your eTA",
+        auth: { name: "Electronic Travel Authorisation (eTA)", fee: "From US$30", time: "About 3 working days (apply 2 weeks ahead)", url: KE_ETA },
+        summary: "You need an eTA, applied for online before you travel. There are no visas on arrival.",
+        checklist: lightChecklist({ purpose: p, passport, auth: item("Approved eTA", "Needs a selfie, itinerary and accommodation booking.", KE_ETA), extra: [ins] }),
+        notes: [yf]
+      };
+    }
+  };
+
   // ---------- Engine ----------
   const DESTINATIONS = [US, CA, GB, FR, DE, IT, ES, NL, PT, GR, CH, AU, JP, AE, MX, BH, IN, TH, IE, NZ, TR, SG, KR, CN, SA,
     BR, AT, BE, CZ, PL, HU, HR, DK, SE, NO,
     FI, IS, MT, LU, SI, SK, EE, LV, LT, RO,
-    BG, LI, VN, ID, MY, PH, EG, MA, ZA, QA];
+    BG, LI, VN, ID, MY, PH, EG, MA, ZA, QA,
+    IL, AR, CO, PE, CL, CR, DO, JM, CU, KE];
 
   function evaluateTrip({ nationalities, destination, purpose, docs }) {
     const dest = DESTINATIONS.find((d) => d.id === destination);
