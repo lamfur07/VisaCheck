@@ -82,11 +82,11 @@ with sync_playwright() as p:
     # 5. Unverified destination without proxy
     pg = page()
     pg.route("**/js/config.js", lambda r: r.fulfill(content_type="application/javascript", body='window.VISACHECK_CONFIG={apiProxyUrl:""};'))
-    pg.goto(BASE + "#n=US&d=TZ&p=tourism"); pg.wait_for_selector(".verdict")
+    pg.goto(BASE + "#n=US&d=KW&p=tourism"); pg.wait_for_selector(".verdict")
     check("no proxy: honest fallback", "don't have verified rules" in pg.inner_text(".verdict"))
 
     # 6. Unverified destination with mocked proxy, including XSS attempt
-    pg = page(); with_proxy(pg, "ok"); pg.goto(BASE + "#n=IN,GB&d=TZ&p=tourism"); pg.wait_for_selector(".verdict")
+    pg = page(); with_proxy(pg, "ok"); pg.goto(BASE + "#n=IN,GB&d=KW&p=tourism"); pg.wait_for_selector(".verdict")
     check("api: verdict rendered", "eVisa" in pg.inner_text(".verdict"))
     check("api: XSS not executed", pg.evaluate("window.__xss") is None)
     check("api: yellow fever item shown", "Yellow fever" in pg.inner_text("#checklistCard"))
@@ -111,9 +111,9 @@ with sync_playwright() as p:
     check("gap fill: API down keeps official 'check' result", "evisa.gov.bh" in pg.inner_text(".verdict"))
 
     # 7. API errors
-    pg = page(); with_proxy(pg, "500"); pg.goto(BASE + "#n=IN&d=TZ&p=tourism"); pg.wait_for_selector(".verdict")
+    pg = page(); with_proxy(pg, "500"); pg.goto(BASE + "#n=IN&d=KW&p=tourism"); pg.wait_for_selector(".verdict")
     check("api 500: friendly error + retry", pg.locator("#retryBtn").count() == 1)
-    pg = page(); with_proxy(pg, "down"); pg.goto(BASE + "#n=IN&d=TZ&p=tourism"); pg.wait_for_selector(".verdict")
+    pg = page(); with_proxy(pg, "down"); pg.goto(BASE + "#n=IN&d=KW&p=tourism"); pg.wait_for_selector(".verdict")
     check("api offline: friendly error", "couldn't load" in pg.inner_text(".verdict"))
 
     # 8. Citizen of destination

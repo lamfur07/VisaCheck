@@ -2493,12 +2493,652 @@
     }
   };
 
+  // =====================================================================
+  // TANZANIA
+  // Sources (checked 2026-11-27):
+  //  https://visa.immigration.go.tz/guidelines (eVisa portal: who is exempt, VOA special-permission list, fees, referral processing)
+  //  https://www.my.tzembassy.go.tz/services/category/visa-information (exempt list and referral list)
+  //  https://www.sa.tzembassy.go.tz/uploads/forms/List_of_Countries_with_VISA_Eligibility.pdf (shorter lists that disagree in places)
+  //  https://www.us.tzembassy.go.tz/services/type-of-visa (US citizens: US$100 multiple entry)
+  //  https://eservices.immigration.go.tz/online/web/permit/guidelines (residence permits A/B/C, version 2024.3)
+  //  https://www.gov.uk/foreign-travel-advice/tanzania/entry-requirements (FCDO, 30 Oct 2026: VOA, 6 months passport, mandatory insurance)
+  //  https://www.norway.no/en/tanzania/norway-tanzania/news-events/mandatory-travel-insurance/ (NIC insurance US$44 from 1 Oct 2026)
+  // Exempt list = embassy list entries that also fit the eVisa portal's rule (EAC, SADC except Comoros, Commonwealth except
+  // GB CA NG IN PK AU NZ). Entries the sources disagree on return "check".
+  // =====================================================================
+  const TZ_FREE = S("AG BS BB BZ BN BW BI CY DM GM GH GD GY JM KE KI LS MW MY MG MT MU MZ NA NR PG RW WS SC SG SZ SB KN LC VC ZA SS TT TO TV VU UG ZM ZW");
+  const TZ_REFERRAL = S("AF AZ BD TD DJ ER GQ KZ KG LB ML MR NE PS SN SO LK SL TJ TM UZ NG PK IQ SY YE IR");
+  const TZ_UNCLEAR = S("RO HK MO CD AO CM AU MA");
+  const TZ_EV = "https://visa.immigration.go.tz/";
+
+  const TZ = {
+    id: "TZ", name: "Tanzania", flag: "🇹🇿", verified: "2026-11-27",
+    links: [
+      ["Tanzania eVisa (official)", TZ_EV],
+      ["eVisa guidelines and fees", "https://visa.immigration.go.tz/guidelines"],
+      ["Immigration Department", "https://www.immigration.go.tz/"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months after arrival, with a blank page.";
+      const ins = item("Tanzanian inbound travel insurance", "Mandatory since 1 Oct 2026: US$44 (mainland, NIC) or the Zanzibar (ZIC) policy, bought on arrival or online. EAC and SADC residents are exempt.");
+      const yf = "Yellow fever certificate needed if arriving from a risk country.";
+      if (nat === "TZ") return { status: "citizen", summary: "Enter on your Tanzanian passport." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a Student Pass from the Immigration Department, applied for online." : "Work needs a work permit from the Labour Commissioner, then a Class B residence permit from Immigration.",
+        auth: { name: p === "study" ? "Student Pass" : "Residence Permit Class B", fee: p === "study" ? "Around US$200 (EAC citizens free)" : "B-1 US$2,000", time: "Apply before travel", url: p === "study" ? "https://eservices.immigration.go.tz/online/web/pass/apply" : "https://eservices.immigration.go.tz/online/web/permit/guidelines" },
+        checklist: [item(p === "study" ? "Admission letter from a Tanzanian institution" : "Approved work permit and contract", ""), common.passport(passport), common.photo()]
+      };
+      if (TZ_UNCLEAR.has(nat)) return {
+        status: "check",
+        summary: "Tanzania's official lists disagree on your nationality, so we can't say whether you need a visa. Ask a Tanzanian embassy, or apply for an eVisa to be safe.",
+        checklist: [common.passport(passport), ins],
+        links: [["eVisa guidelines (official)", "https://visa.immigration.go.tz/guidelines"]]
+      };
+      if (p === "transit") return {
+        status: "check",
+        summary: "Leaving the airport needs a transit visa (US$30, up to 7 days, with an onward ticket)" + (TZ_FREE.has(nat) ? ", unless you're visa-exempt" : "") + ". We couldn't confirm the rule for staying airside.",
+        checklist: [common.passport(passport), item("Onward ticket", "And a visa for your next country.")]
+      };
+      if (TZ_FREE.has(nat)) return { status: "free", stay: "Up to 90 days", summary: "No visa needed, but you must buy Tanzania's mandatory travel insurance.", checklist: lightChecklist({ purpose: p, passport, extra: [ins] }), notes: [yf] };
+      if (TZ_REFERRAL.has(nat)) return {
+        status: "visa",
+        auth: { name: "Referral visa (approved in Dar es Salaam)", fee: "From US$50", time: "No fixed time: apply at least 2 months ahead", url: TZ_EV },
+        summary: "Your nationality is on Tanzania's referral list: the visa needs approval from the Commissioner General. Apply online at least 2 months ahead and don't book flights until it's approved. No visa on arrival.",
+        checklist: visitorChecklist({ purpose: p, passport, extra: [ins] }),
+        notes: [yf]
+      };
+      const fee = p === "business" ? "US$250" : nat === "US" ? "US$100 (US citizens get a multiple-entry visa)" : "US$50 single entry";
+      return {
+        status: "evisa", stay: "Up to 90 days",
+        auth: { name: p === "business" ? "Business visa" : "Ordinary visa", fee, time: "Up to 10 days", url: TZ_EV },
+        summary: "Apply online for an eVisa before you travel. A single-entry visa is also sold on arrival at main entry points, but applying ahead is recommended.",
+        checklist: lightChecklist({ purpose: p, passport, auth: item("Approved eVisa", "Print the grant notice.", TZ_EV), extra: [ins] }),
+        notes: [yf, "Multiple-entry visas are not issued on arrival."]
+      };
+    }
+  };
+
+  // =====================================================================
+  // SRI LANKA
+  // Sources (checked 2026-11-27):
+  //  https://www.immigration.gov.lk/content/files/visa/Free%20Tourist%20Visas%20for%20Nationals%20of%2040%20Selected%20Countries.pdf (24 May 2026)
+  //  https://documents.gov.lk/view/egz/2026/5/2490-02_E.pdf (Gazette 2490/02: free ETA for 40 countries, 25.05.2026 to 24.11.2026)
+  //  https://www.eta.gov.lk/slvisa/ and https://eta.gov.lk/etaslvisa/etaNavServ (ETA rules, sponsor route for CM NG CI GH AF, TW XK SY)
+  //  https://www.immigration.gov.lk/pages_e.php?id=45 (fees) ; https://www.eta.gov.lk/slvisa/images/Chart%2001.pdf (fee chart)
+  //  https://www.immigration.gov.lk/pages_e.php?id=14 (visa categories, passport) ; https://www.immigration.gov.lk/pages_e.php?id=18 (residence visas)
+  //  https://www.gov.uk/foreign-travel-advice/sri-lanka/entry-requirements (FCDO, 21 Sep 2026: transit under 24 hours)
+  // The free-ETA scheme's gazetted end date (24 Nov 2026) has passed; eta.gov.lk still shows it as free. No extension gazette found.
+  // =====================================================================
+  const LK_FREE40 = S("AU AT BH BY BE CA CN CZ DK FI FR DE IN ID IR IL IT JP KZ KW MY NP NL NZ NO OM PK PL QA RU SA KR ES SE CH TH TR AE GB US");
+  const LK_RECIP = S("MV SC SG");
+  const LK_SPONSOR = S("CM NG CI GH AF TW XK SY");
+  const LK_SAARC = S("BD BT");
+  const LK_ETA = "https://www.eta.gov.lk/slvisa/";
+
+  const LK = {
+    id: "LK", name: "Sri Lanka", flag: "🇱🇰", verified: "2026-11-27",
+    links: [
+      ["Sri Lanka ETA (official)", LK_ETA],
+      ["Visa fees (Department of Immigration)", "https://www.immigration.gov.lk/pages_e.php?id=45"],
+      ["Department of Immigration and Emigration", "https://www.immigration.gov.lk/"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months from arrival.";
+      if (nat === "LK") return { status: "citizen", summary: "Enter on your Sri Lankan passport." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a Residence Visa (education), recommended by the Ministry of Higher Education (university) or your embassy (other courses)." : "Work needs a Residence Visa (employment), recommended by the BOI or the relevant ministry.",
+        auth: { name: "Residence Visa", fee: "US$200 a year", time: "Apply at the Battaramulla head office", url: "https://www.immigration.gov.lk/pages_e.php?id=18" },
+        checklist: [item(p === "study" ? "Admission letter and recommendation" : "Job offer and recommendation letter", ""), item("Health Protection Plan", "Required for residence visas."), common.passport(passport), common.photo()]
+      };
+      if (p === "transit") return { status: "free", summary: "No visa needed if your connecting flight leaves within 24 hours. For longer transits a free 48-hour transit visa is available.", checklist: [common.passport(passport), item("Onward boarding pass", "")] };
+      if (LK_SPONSOR.has(nat)) return {
+        status: "visa",
+        summary: "You can't get an ETA online on your own. A Sri Lankan sponsor must apply for you at the Department of Immigration head office in Battaramulla.",
+        checklist: visitorChecklist({ purpose: p, passport, extra: [item("Sponsor letter and affidavit", "From your Sri Lankan sponsor."), item("Police clearance", "From your home country.")] }),
+        links: [["ETA rules (official)", "https://eta.gov.lk/etaslvisa/etaNavServ"]]
+      };
+      const free = LK_FREE40.has(nat) || LK_RECIP.has(nat);
+      const paid = p === "business" ? (LK_SAARC.has(nat) ? "US$30" : "US$55") : (LK_SAARC.has(nat) ? "US$20" : "US$50");
+      return {
+        status: "eta", stay: nat === "MV" ? "Up to 90 days" : "30 days, double entry",
+        auth: { name: "Electronic Travel Authorisation (ETA)", fee: free && p !== "business" ? "Free under the 2026 scheme (otherwise " + paid + ")" : paid, time: "Apply before travel", url: LK_ETA },
+        summary: "Apply online for an ETA before you travel." + (free && p !== "business" ? " Your nationality is on Sri Lanka's free-ETA list." : ""),
+        checklist: lightChecklist({ purpose: p, passport, auth: item("Approved ETA", "Apply only at eta.gov.lk.", LK_ETA) }),
+        ...(free && p !== "business" ? { warn: ["The free-ETA scheme was gazetted to end on 24 Nov 2026. The ETA site still shows it as free, but check the fee on eta.gov.lk before you apply."] } : {}),
+        notes: ["Yellow fever certificate needed if arriving from a risk country.", "Children under 12 get a free ETA."]
+      };
+    }
+  };
+
+  // =====================================================================
+  // MALDIVES
+  // Sources (checked 2026-11-27):
+  //  https://www.immigration.gov.mv/visa/tourist-visa (free 30-day tourist visa on arrival for all; Israeli passports refused since 15 Apr 2025;
+  //   passport 1 month, booking, funds, IMUGA declaration)
+  //  https://2026.mdvmission.gov.mv/uk/articles/visa-and-passport-information-17 (02 Jul 2026: extension to 90 days)
+  //  https://www.immigration.gov.mv/visa/work-visa (Xpat portal, 06/09/2026) ; https://www.immigration.gov.mv/visa/business (business eVisa)
+  //  https://www.gov.uk/foreign-travel-advice/maldives/entry-requirements (FCDO, 12 Aug 2026)
+  // =====================================================================
+  const MV_IMUGA = "https://imuga.immigration.gov.mv";
+
+  const MV = {
+    id: "MV", name: "Maldives", flag: "🇲🇻", verified: "2026-11-27",
+    links: [
+      ["IMUGA traveller declaration (official)", MV_IMUGA],
+      ["Tourist visa (Maldives Immigration)", "https://www.immigration.gov.mv/visa/tourist-visa"],
+      ["Maldives Immigration", "https://www.immigration.gov.mv/"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Machine-readable, valid at least 1 month. Passports with hand-extended validity are refused.";
+      const imuga = item("IMUGA traveller declaration", "Free and mandatory for everyone, children included. Submit within 96 hours before arrival.", MV_IMUGA);
+      if (nat === "MV") return { status: "citizen", summary: "Enter on your Maldivian passport." };
+      if (nat === "IL") return { status: "banned", summary: "The Maldives has refused entry on Israeli passports since 15 April 2025." };
+      if (p === "transit") return { status: "free", summary: "No visa needed if you transfer without passing immigration.", checklist: [common.passport(passport), item("Onward boarding pass", "")] };
+      if (p === "work") return {
+        status: "permit",
+        summary: "Your employer gets a work quota and Work Permit Entry Pass. Within 15 days of arrival they apply for your Work Visa on the Xpat portal.",
+        auth: { name: "Work Visa (via employer)", fee: "Employer pays permit fees", time: "Arranged by your employer", url: "https://www.immigration.gov.mv/visa/work-visa" },
+        checklist: [item("Work Permit Entry Pass", "Issued to your employer before you travel."), common.passport(passport), imuga]
+      };
+      if (p === "study") return { status: "check", summary: "We couldn't find an official page for student visas. Ask Maldives Immigration or your school.", checklist: [common.passport(passport)], links: [["Maldives Immigration", "https://www.immigration.gov.mv/"]] };
+      if (p === "business") return {
+        status: "evisa", stay: "Up to 90 days in 12 months",
+        auth: { name: "Business Visa", fee: "Not published", time: "Apply before arrival", url: "https://business.egov.mv" },
+        summary: "Business visits need a Business Visa. A locally registered company invites you and applies on the business portal; it's issued as an eVisa.",
+        checklist: [common.passport(passport), common.business(), common.ticket(), imuga]
+      };
+      return {
+        status: "voa", stay: "30 days (extendable up to 90 days in total)",
+        auth: { name: "Tourist visa on arrival", fee: "Free", time: "On arrival", url: "https://www.immigration.gov.mv/visa/tourist-visa" },
+        summary: "Every nationality gets a free 30-day tourist visa on arrival, if you meet the conditions. You must file the IMUGA declaration first.",
+        checklist: [common.passport(passport), imuga, common.ticket(), item("Confirmed accommodation", "A prepaid booking at a registered resort, hotel or guesthouse."), common.funds()],
+        notes: ["Tourists may not work or do business.", "Yellow fever certificate needed if arriving from or transiting a risk country.", "A Green Tax (US$6 to US$12 a night) is added to your accommodation bill."]
+      };
+    }
+  };
+
+  // =====================================================================
+  // NEPAL
+  // Sources (checked 2026-11-27):
+  //  https://www.immigration.gov.np/en/post/visa-fee-and-documents-1 (DoI, 2026-01-02: fees, gratis visas for SAARC/CN, transit, study and work visas)
+  //  https://ntb.gov.np/plan-your-trip/before-you-come/tourist-visa (Nepal Tourism Board: VOA exclusions, online form)
+  //  https://in.nepalembassy.gov.np/pages/Visa-1/ ; https://ca.nepalembassy.gov.np/pages/visa-4/ ; https://cn.nepalembassy.gov.np/pages/visa/
+  //  https://www.indembkathmandu.gov.in/consular-services-2 (Indian citizens: passport or Voter ID)
+  //  https://www.gov.uk/foreign-travel-advice/nepal/entry-requirements (FCDO, 1 Oct 2026: 6 months passport)
+  // =====================================================================
+  const NP_NO_VOA = S("NG GH ZW SZ CM SO LR ET IQ IR PS AF SY");
+  const NP_SAARC = S("BD BT MV PK LK");
+  const NP_FORM = "https://nepaliport.immigration.gov.np/";
+
+  const NP = {
+    id: "NP", name: "Nepal", flag: "🇳🇵", verified: "2026-11-27",
+    links: [
+      ["Online arrival visa form (official)", NP_FORM],
+      ["Visa fees (Department of Immigration)", "https://www.immigration.gov.np/en/post/visa-fee-and-documents-1"],
+      ["Tourist visa (Nepal Tourism Board)", "https://ntb.gov.np/plan-your-trip/before-you-come/tourist-visa"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid more than 6 months, with a blank visa page.";
+      if (nat === "NP") return { status: "citizen", summary: "Enter on your Nepali passport." };
+      if (nat === "IN") return {
+        status: "free", stay: "No set limit",
+        summary: "Indian citizens don't need a visa. Carry an Indian passport or Election Commission Voter ID (Aadhaar and PAN are not accepted).",
+        checklist: [item("Indian passport or Voter ID", "Needed for everyone over 10.")]
+      };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a Study Visa from the Department of Immigration, with a Ministry of Education recommendation." : "Work needs a Labour Permit from the Department of Labour, then a Working (Non-Tourist) Visa.",
+        auth: { name: p === "study" ? "Study Visa" : "Working (Non-Tourist) Visa", fee: p === "study" ? "From US$30 a month" : "US$30 to US$75 a month", time: "Apply through your sponsor", url: "https://www.immigration.gov.np/en/post/visa-fee-and-documents-1" },
+        checklist: [item(p === "study" ? "University admission and recommendation letter" : "Labour Permit, contract and recommendation letter", ""), common.passport(passport), common.photo()]
+      };
+      if (NP_NO_VOA.has(nat)) return {
+        status: "visa",
+        summary: "Your nationality can't get a visa on arrival. Apply at a Nepali embassy or consulate before you travel.",
+        checklist: visitorChecklist({ purpose: p, passport }),
+        links: [["Tourist visa (Nepal Tourism Board)", "https://ntb.gov.np/plan-your-trip/before-you-come/tourist-visa"]]
+      };
+      if (p === "transit") return {
+        status: "voa", stay: "Up to 24 hours",
+        auth: { name: "Transit visa", fee: "US$5", time: "On arrival", url: "https://www.immigration.gov.np/en/post/visa-fee-and-documents-1" },
+        summary: "A transit visa (US$5, up to 24 hours) is available on arrival if you leave the airport.",
+        checklist: [common.passport(passport), item("Onward ticket", "")]
+      };
+      if (p === "business") return {
+        status: "check",
+        summary: "We couldn't confirm which visa covers short business visits. Nepal's Business Visa is for investors. Ask a Nepali embassy.",
+        checklist: [common.passport(passport)],
+        links: [["Visa fees (Department of Immigration)", "https://www.immigration.gov.np/en/post/visa-fee-and-documents-1"]]
+      };
+      const gratis = nat === "CN" ? "Free (up to 150 days a year)" : NP_SAARC.has(nat) ? "Free for 30 days on your first visit this year" : null;
+      return {
+        status: "voa", stay: nat === "CN" ? "Up to 150 days a year" : "15, 30 or 90 days (max 150 days a year)",
+        auth: { name: "Tourist visa on arrival", fee: gratis || "US$30 (15 days), US$50 (30 days), US$125 (90 days)", time: "On arrival", url: NP_FORM },
+        summary: "Get a tourist visa on arrival, or from a Nepali embassy before you travel. Fill in the online form up to 15 days ahead to save time.",
+        checklist: [common.passport(passport), item("Online visa form receipt", "Fill in within 15 days before arrival and print the receipt.", NP_FORM), item("Visa fee in cash", gratis ? "Not needed: your visa is free." : "Carry US dollars. Cards don't always work."), common.photo(), common.ticket(), common.stay()],
+        notes: ["Extensions cost US$3 a day (minimum 15 days).", "Travel insurance covering rescue is strongly recommended for trekking."]
+      };
+    }
+  };
+
+  // =====================================================================
+  // CAMBODIA
+  // Sources (checked 2026-11-27):
+  //  https://www.gov.uk/foreign-travel-advice/cambodia/entry-requirements (FCDO, 25 Nov 2026: eVisa or VOA, 30 days; e-Arrival; 6 months passport)
+  //  https://travel.gc.ca/destinations/cambodia (Government of Canada, 14 Oct 2026) ; https://www.smartraveller.gov.au/destinations/asia/cambodia
+  //  https://www.embassyofcambodiadc.org/uploads/9/8/1/8/98182996/recdc_tourist_visa_application_form2024.pdf (Royal Embassy DC: Type T US$30)
+  //  https://data.mef.gov.kh/datasets/pd_68198e4cdbc953000126f59d (MEF open data: VN 30 days, TH 14 days)
+  // evisa.gov.kh and MFAIC pages could not be read, so only nationalities confirmed by their own governments get a full answer.
+  // =====================================================================
+  const KH_EV = "https://www.evisa.gov.kh/";
+  const KH_ARR = item("Cambodia e-Arrival card", "Free and mandatory for air arrivals. Submit within 7 days before arrival.", "https://arrival.gov.kh");
+
+  const KH = {
+    id: "KH", name: "Cambodia", flag: "🇰🇭", verified: "2026-11-27",
+    links: [
+      ["Cambodia eVisa (official)", KH_EV],
+      ["e-Arrival card (official)", "https://arrival.gov.kh"],
+      ["Cambodia entry requirements (UK FCDO)", "https://www.gov.uk/foreign-travel-advice/cambodia/entry-requirements"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months from arrival, undamaged, with a blank page.";
+      if (nat === "KH") return { status: "citizen", summary: "Enter on your Cambodian passport." };
+      if (p === "work") return {
+        status: "permit",
+        summary: "Work needs an ordinary (E) visa and a work permit from the Ministry of Labour and Vocational Training.",
+        auth: { name: "E visa + work permit", fee: "Varies", time: "Apply through your employer", url: "https://www.gov.uk/foreign-travel-advice/cambodia/entry-requirements" },
+        checklist: [item("Job offer and work permit", ""), common.passport(passport), common.photo()],
+        notes: ["Foreign residents must be registered in the Foreigners Presence in Cambodia System (FPCS)."]
+      };
+      if ((nat === "VN" || nat === "TH") && (p === "tourism" || p === "business")) return {
+        status: "free", stay: nat === "VN" ? "30 days" : "14 days",
+        summary: "No visa needed for this stay.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [KH_ARR] }),
+        notes: ["Land borders with Thailand are currently closed."]
+      };
+      if (["US", "GB", "CA", "AU"].includes(nat) && (p === "tourism" || p === "business")) return {
+        status: "evisa", stay: "30 days (extendable once)",
+        auth: { name: p === "business" ? "Business visa (E)" : "Tourist visa (T)", fee: "About US$30 plus a processing fee", time: "Apply at least 4 days ahead", url: KH_EV },
+        summary: "You need a visa. Apply online for an eVisa, or get a visa on arrival at international airports and main land crossings.",
+        checklist: lightChecklist({ purpose: p, passport, auth: item("eVisa or visa-on-arrival fee", "Bring US dollars and a passport photo if getting it on arrival."), extra: [KH_ARR] }),
+        notes: ["Only use evisa.gov.kh. Other sites charge extra.", "Land borders with Thailand are currently closed."]
+      };
+      return {
+        status: "check",
+        summary: "Most visitors can get an eVisa or a visa on arrival, but we couldn't read Cambodia's official list of eligible and exempt nationalities. Check on the eVisa site or ask a Cambodian embassy.",
+        checklist: [common.passport(passport), KH_ARR],
+        links: [["Cambodia eVisa (official)", KH_EV]]
+      };
+    }
+  };
+
+  // =====================================================================
+  // TAIWAN
+  // Sources (checked 2026-11-27):
+  //  https://www.boca.gov.tw/cp-149-4486-7785a-2.html (BOCA visa-exempt list, 2026-07-17: 90/30/14 days, conditions, birthplace exclusions)
+  //  https://www.boca.gov.tw/cp-181-8051-69fbd-2.html (eVisa eligibility, 2026-08-18) ; https://www.boca.gov.tw/fp-181-4492-0447f-2.html (fees)
+  //  https://niaspeedy.immigration.gov.tw/nia_southeast/doMessage?language=1 (Travel Authorization Certificate for IN ID LA MM VN)
+  //  https://www.immigration.gov.tw/5475/5478/141457/142068/398041/ (Taiwan Arrival Card, within 3 days before arrival)
+  //  https://www.boca.gov.tw/cp-159-249-4162c-2.html (designated countries incl. NG, 2026-10-15) ; https://www.boca.gov.tw/lp-166-2.html (resident visas)
+  //  https://www.immigration.gov.tw/media/55249/immigration-reference-guide-for-civil-carriers.pdf (PRC, HK, MO entry permits)
+  // =====================================================================
+  const TW_90 = S("AL AD AU AT BE BG CA CL HR CY CZ DK EE SZ FI FR DE GR GT VA HU IS IE IL IT JP XK KR LV LT LI LU MT MH MC NL NZ MK NO PW PY PL PT RO SM SK SI ES SE CH TV GB US HN");
+  const TW_30 = S("BZ MY KN LC VC SG DO");
+  const TW_14 = S("OM TH BN PH");
+  const TW_EVISA = S("RU TR BH BA DM EC HT KW MU ME PA PE QA SA AE");
+  const TW_EVISA_COND = S("CO AM KZ UZ");
+  const TW_TAC = S("IN ID LA MM VN");
+  const TW_EV = "https://visawebapp.boca.gov.tw";
+  const TW_TWAC = item("Taiwan Arrival Card", "Free and mandatory. Submit online within 3 days before arrival.", "https://twac.immigration.gov.tw");
+
+  const TW = {
+    id: "TW", name: "Taiwan", flag: "🇹🇼", verified: "2026-11-27",
+    links: [
+      ["Visa-exempt entry (BOCA)", "https://www.boca.gov.tw/cp-149-4486-7785a-2.html"],
+      ["Taiwan eVisa (official)", TW_EV],
+      ["Taiwan Arrival Card", "https://twac.immigration.gov.tw"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = nat === "US" || nat === "JP" ? "Valid for your whole stay." : "Valid at least 6 months from arrival.";
+      if (nat === "TW") return { status: "citizen", summary: "Enter on your Taiwan passport." };
+      if (nat === "CN" || nat === "HK" || nat === "MO") return {
+        status: "permit",
+        summary: nat === "CN" ? "Mainland Chinese residents can't use visas or visa exemption. You need an Entry & Exit Permit from Taiwan's National Immigration Agency." : "You need an Entry Permit, Online Entry Permit or Temporary Entry Permit from Taiwan's National Immigration Agency. Your passport must be valid at least 3 months.",
+        auth: { name: "Entry & Exit Permit", fee: "Varies", time: "Apply before travel", url: "https://www.immigration.gov.tw/" },
+        checklist: [common.passport(nat === "CN" ? "Valid more than 6 months." : "Valid at least 3 months."), common.ticket(), TW_TWAC]
+      };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Full-time study needs a resident visa for foreign students, applied for at a Taiwan mission with your admission letter." : "Work needs a work permit (usually arranged by your employer) and a resident visa. The Employment Gold Card combines both for qualified professionals.",
+        auth: { name: p === "study" ? "Resident visa (student)" : "Work permit + resident visa", fee: "Varies", time: "Apply before travel", url: p === "study" ? "https://www.boca.gov.tw/cp-166-283-c4da3-2.html" : "https://goldcard.nat.gov.tw/en/about/" },
+        checklist: [item(p === "study" ? "Admission letter from a Taiwan institution" : "Work permit or Gold Card", ""), common.passport(passport), common.photo()]
+      };
+      if (p === "transit") return { status: "check", summary: "We couldn't find official rules for visa-free transit. Ask your airline or a Taiwan mission.", checklist: [common.passport(passport)], links: [["Bureau of Consular Affairs", "https://www.boca.gov.tw/"]] };
+      const stay = TW_90.has(nat) ? (nat === "CA" || nat === "GB" ? "90 days (extendable to 180)" : "90 days") : TW_30.has(nat) ? "30 days" : TW_14.has(nat) ? "14 days" : null;
+      if (stay) return {
+        status: "free", stay,
+        summary: "No visa needed for this stay. You must file the Taiwan Arrival Card online before you land.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [TW_TWAC] }),
+        ...(["BZ", "SZ", "KN", "LC", "TV", "HN"].includes(nat) ? { warn: ["Visa exemption doesn't apply if your passport shows your birthplace as " + (nat === "HN" ? "China." : "Afghanistan, Iran, Iraq, Libya, Nigeria, China, Syria or Yemen.")] } : {}),
+        ...(nat === "GB" ? { warn: ["Only British citizen passports qualify."] } : {}),
+        notes: ["Visa-exempt stays can't be extended" + (nat === "CA" || nat === "GB" ? " beyond 180 days." : "."), ...(["TH", "BN", "PH"].includes(nat) ? ["This exemption is a trial until 31 Jul 2027. Bring a hotel booking, a contact in Taiwan and proof of funds."] : [])]
+      };
+      if (TW_TAC.has(nat)) {
+        const ok = nat === "VN" ? has(ctx, "visa:US", "pr:US", "visa:CA", "pr:CA", "visa:GB", "pr:GB", "visa:SCHENGEN", "pr:EU", "visa:AU", "pr:AU", "visa:NZ", "pr:NZ")
+          : has(ctx, "visa:US", "pr:US", "visa:CA", "pr:CA", "visa:GB", "pr:GB", "visa:SCHENGEN", "pr:EU", "visa:AU", "pr:AU", "visa:NZ", "pr:NZ", "visa:JP", "pr:JP", "visa:KR", "pr:KR");
+        if (ok && (p === "tourism" || p === "business")) return {
+          status: "eta", stay: "14 days per entry (valid 90 days)",
+          auth: { name: "Travel Authorization Certificate", fee: "Free", time: "Online, before travel", url: "https://niaspeedy.immigration.gov.tw/nia_southeast/doMessage?language=1" },
+          summary: "Your visa or residence from another country lets you apply online for a Travel Authorization Certificate instead of a visa.",
+          checklist: lightChecklist({ purpose: p, passport, auth: item("Printed Travel Authorization Certificate", "Carry it with the qualifying visa or residence card."), extra: [TW_TWAC] }),
+          notes: ["Visas or residence that expired less than 10 years ago also count. Work permits don't.", "Japan or Korea visa holders must show they actually entered Japan or Korea."]
+        };
+      }
+      if (TW_EVISA.has(nat) || (TW_EVISA_COND.has(nat) && has(ctx, "visa:US", "pr:US", "visa:SCHENGEN", "pr:EU"))) return {
+        status: "evisa", stay: "Up to 30 days",
+        auth: { name: "Taiwan eVisa", fee: S("BA CO HT MU ME PA PE TR").has(nat) ? "Free" : "NT$1,646", time: "Apply online before travel", url: TW_EV },
+        summary: "Apply online for a Taiwan eVisa before you travel.",
+        checklist: lightChecklist({ purpose: p, passport, auth: item("Printed eVisa", "", TW_EV), extra: [TW_TWAC] })
+      };
+      return {
+        status: "visa",
+        summary: "You need a visitor visa from a Taiwan mission (Taipei Economic and Cultural Office) before you travel." + (nat === "NG" ? " Nigeria is a designated country: expect an interview and a sponsor guarantee." : "") + (TW_TAC.has(nat) ? " If you hold a qualifying visa or residence from the US, Canada, UK, Schengen, Australia, NZ, Japan or Korea, add it to use the online Travel Authorization instead." : ""),
+        checklist: visitorChecklist({ purpose: p, passport, extra: [TW_TWAC] }),
+        links: [["Bureau of Consular Affairs", "https://www.boca.gov.tw/"]]
+      };
+    }
+  };
+
+  // =====================================================================
+  // HONG KONG SAR
+  // Sources (checked 2026-11-27):
+  //  https://www.immd.gov.hk/eng/services/visas/visit-visa-entry-permit.html (ImmD visa requirements, updated Aug 2026: 180/90/30/14/7 days,
+  //   visa nationals, airside transit visa lists)
+  //  https://www.immd.gov.hk/eng/services/visas/pre-arrival_registration_for_indian_nationals.html (Indian PAR, 05-11-2026)
+  //  https://www.immd.gov.hk/eng/services/visas/visit_transit.html (visit/transit visa, about 4 weeks) ; fee table 08-04-2026
+  //  https://www.immd.gov.hk/eng/services/visas/overseas-chinese-entry-arrangement.html (mainland EEP, PRC passport transit, Taiwan residents)
+  //  https://www.immd.gov.hk/eng/services/visas/GEP.html ; https://www.immd.gov.hk/eng/services/visas/TTPS.html ; https://www.immd.gov.hk/eng/services/visas/study.html
+  //  https://www.gov.uk/foreign-travel-advice/hong-kong/entry-requirements (FCDO, 1 Apr 2026)
+  // =====================================================================
+  const HK_90 = S("AD AG AR AU AT BS BB BE BZ BW BR BN BG CA CL CO HR CY CZ DK DM EC EG EE FJ FI FR DE GR GD GY HU IS IE IL IT JM JP KE KI KR LV LI LT LU MW MY MV MT MU MX MC NA NR NL NZ NO PG PL PT RO SM SA SC SG SK SI ES SE CH TZ TO TT TR TV UY US VU VE ZM ZW");
+  const HK_30 = S("AM BH BY BO CV CR DO SV GE GT HN ID JO KW MA NI OM PA PY PE QA WS SB ZA TH TN UG AE");
+  const HK_14 = S("AL DZ BJ BT BA BF TD KM DJ GQ GA GN HT KZ LS MG ML MH MR FM MN ME MZ NE MK PW PH RU ST RS SR UA VA");
+  const HK_VISA_AIRSIDE = S("AF CF CD CI ER SZ GM GW IR IQ KP LR LY NG SL SO SS SD SY YE AO BD BI CM CG ET GH RW LK TG PK");
+  const HK_VISA = union(HK_VISA_AIRSIDE, S("AZ KH KG LA MD MM NP TJ TM UZ VN CU LB PS SN"));
+  const HK_VISA_URL = "https://www.immd.gov.hk/eng/services/visas/visit_transit.html";
+
+  const HK = {
+    id: "HK", name: "Hong Kong SAR", flag: "🇭🇰", verified: "2026-11-27",
+    links: [
+      ["Visa requirements (Immigration Department)", "https://www.immd.gov.hk/eng/services/visas/visit-visa-entry-permit.html"],
+      ["Apply for a visit visa (official)", HK_VISA_URL],
+      ["Immigration Department", "https://www.immd.gov.hk/"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid for your whole stay" + (nat === "GB" ? ", and at least 1 month after you leave." : ".");
+      if (nat === "HK") return { status: "citizen", summary: "Enter with your Hong Kong permanent identity card." };
+      if (nat === "MO") return { status: "check", summary: "We couldn't confirm the rules for Macao residents on an official page. Ask the Immigration Department.", checklist: [common.passport(passport)], links: [["Immigration Department", "https://www.immd.gov.hk/"]] };
+      if (p === "study" || p === "work") {
+        const barred = p === "work" ? S("AF CU KP") : S("AF CU LA KP NP VN");
+        if (nat === "CN") return { status: "permit", summary: p === "work" ? "Mainland residents work in Hong Kong under the Admission Scheme for Mainland Talents and Professionals (ASMTP), or the Top Talent Pass Scheme." : "Mainland students need an entry permit for study, sponsored by their Hong Kong institution.", checklist: [item("Sponsor or employer in Hong Kong", "")], auth: { name: p === "work" ? "ASMTP or TTPS" : "Study entry permit", fee: "HK$600 application fee", time: "About 4 to 6 weeks", url: p === "work" ? "https://www.immd.gov.hk/eng/services/visas/TTPS.html" : "https://www.immd.gov.hk/eng/services/visas/study.html" } };
+        if (barred.has(nat)) return { status: "check", summary: "Your nationality is excluded from Hong Kong's usual " + (p === "work" ? "work" : "study") + " schemes. Ask the Immigration Department.", checklist: [common.passport(passport)], links: [["Immigration Department", "https://www.immd.gov.hk/"]] };
+        return {
+          status: "permit",
+          summary: p === "study" ? "Study needs a study visa, sponsored by your Hong Kong school or university." : "Work needs an employment visa under the General Employment Policy (job offer needed), or the Top Talent Pass Scheme (no job offer needed).",
+          auth: { name: p === "study" ? "Study visa" : "GEP employment visa or Top Talent Pass", fee: "HK$600 application + HK$600 or HK$1,300 issue fee", time: p === "study" ? "About 6 weeks" : "About 4 weeks", url: p === "study" ? "https://www.immd.gov.hk/eng/services/visas/study.html" : "https://www.immd.gov.hk/eng/services/visas/GEP.html" },
+          checklist: [item(p === "study" ? "Admission letter and sponsor (form ID 995B)" : "Job offer, degree certificate and employer forms", ""), common.passport(passport), common.photo()]
+        };
+      }
+      if (nat === "CN") {
+        if (p === "transit") return { status: "free", stay: "7 days", summary: "PRC passport holders in transit get up to 7 days, with a confirmed onward booking and entry documents for your destination.", checklist: [common.passport(passport), common.ticket()] };
+        return {
+          status: "permit",
+          summary: "Mainland residents need an Exit-Entry Permit for Travelling to and from Hong Kong and Macao, with an endorsement (individual visit, group tour, business or visiting relatives) from your Public Security Bureau.",
+          auth: { name: "Exit-Entry Permit + endorsement", fee: "Varies", time: "Apply in the mainland", url: "https://www.immd.gov.hk/eng/services/visas/overseas-chinese-entry-arrangement.html" },
+          checklist: [item("Exit-Entry Permit with a valid endorsement", "")]
+        };
+      }
+      if (nat === "TW") return {
+        status: "eta", stay: "30 days",
+        auth: { name: "Online pre-arrival registration (or Mainland Travel Permit for Taiwan Residents)", fee: "Free", time: "Online, before travel", url: "https://www.immd.gov.hk/eng/services/visas/overseas-chinese-entry-arrangement.html" },
+        summary: "Taiwan residents can register online for free before travel, or enter on a Mainland Travel Permit for Taiwan Residents.",
+        checklist: [common.passport(passport), common.ticket()]
+      };
+      if (p === "transit") {
+        if (HK_VISA_AIRSIDE.has(nat)) return { status: "visa", summary: "Your nationality needs a Hong Kong visa even to transit airside.", auth: { name: "Transit visa", fee: "HK$170", time: "About 4 weeks", url: HK_VISA_URL }, checklist: visitorChecklist({ purpose: p }) };
+        return { status: "free", summary: "No visa needed if you transfer airside without passing immigration.", checklist: [common.passport(passport), item("Onward boarding pass", "")] };
+      }
+      if (HK_VISA.has(nat)) return {
+        status: "visa",
+        auth: { name: "Visit visa (e-Visa)", fee: "HK$330 (paid after approval)", time: "About 4 weeks", url: HK_VISA_URL },
+        summary: "You need a visit visa from the Hong Kong Immigration Department. Apply online with forms ID 1003A and 1003B (sponsor). Chinese embassies don't handle these.",
+        checklist: visitorChecklist({ purpose: p, extra: [item("Local sponsor (form ID 1003B)", "A Hong Kong resident or company.")] })
+      };
+      if (nat === "IN") return {
+        status: "eta", stay: "14 days per visit (registration valid 6 months)",
+        auth: { name: "Pre-arrival Registration (PAR)", fee: "Free", time: "Result shown instantly", url: "https://www.gov.hk/en/apps/immdes2indianparreg.htm" },
+        summary: "Register online for free before you travel. If your registration fails, you'll need a visit visa (about 4 weeks).",
+        checklist: lightChecklist({ purpose: p, passport: "Valid at least 6 months.", auth: item("PAR result slip", "Print it or keep it on your phone.") })
+      };
+      const stay = nat === "GB" ? "180 days" : HK_90.has(nat) ? "90 days" : HK_30.has(nat) ? "30 days" : HK_14.has(nat) ? "14 days" : "7 days";
+      return {
+        status: "free", stay,
+        summary: "No visa needed for this visit. Visitors may not work or study.",
+        checklist: [common.passport(passport), common.ticket(), common.funds()],
+        ...(nat === "GB" ? { warn: ["180 days applies to British citizen passports. BN(O) passports are no longer accepted for immigration clearance."] } : {}),
+        ...(nat === "US" ? { notes: ["US diplomatic passports need a visa."] } : {}),
+        ...(nat === "AL" || nat === "RS" ? { warn: ["Only biometric passports qualify."] } : {})
+      };
+    }
+  };
+
+  // =====================================================================
+  // MACAO SAR
+  // Sources (checked 2026-11-27):
+  //  https://www.gov.mo/en/services/ps-1474/ps-1474b/ ("Immigration Clearance of Non-residents of Macao", 2026-11-20: visa-exempt stays,
+  //   visa on arrival fees, advance-visa list BD NP NG PK LK VN, mainland EEP, passport 90 days beyond stay)
+  //  https://www.gov.mo/en/services/ps-1474/faqs (no arrival card; mainland endorsement rules)
+  //  https://www.gov.mo/en/services/ps-1479/ (student authorisation) ; https://www.gov.mo/en/services/ps-1477/ (non-resident worker card)
+  // The 30-day group is every exempt nationality not given a longer stay (the page's general "up to 30 days" row).
+  // =====================================================================
+  const MO_180 = S("GB");
+  const MO_90 = union(EEA_CH, S("CY IL LB NZ AL AD BA BR CV DM EG GD JP MA KR MK ML MU MX MD MN ME AM RS TZ UY MC"));
+  const MO_30 = S("AR AU BH BY CA CL EC FJ IN ID KI KW MY NA OM PH QA RU WS SM SA SC SG ZA TH TR AE US");
+  const MO_14 = S("BN KZ");
+  const MO_ADVANCE = S("BD NP NG PK LK VN");
+  const MO_URL = "https://www.gov.mo/en/services/ps-1474/ps-1474b/";
+
+  const MO = {
+    id: "MO", name: "Macao SAR", flag: "🇲🇴", verified: "2026-11-27",
+    links: [
+      ["Entry rules for non-residents (gov.mo)", MO_URL],
+      ["Immigration FAQs (gov.mo)", "https://www.gov.mo/en/services/ps-1474/faqs"],
+      ["Public Security Police", "https://www.fsm.gov.mo/psp/"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 90 days beyond your stay.";
+      if (nat === "MO") return { status: "citizen", summary: "Enter with your Macao resident identity card." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a Special Authorization to Stay for Non-resident Students, after admission to a Macao higher-education institution." : "Work needs a Non-resident Worker's Identification Card, after your employer gets an employment authorisation.",
+        auth: { name: p === "study" ? "Special Authorization to Stay (student)" : "Non-resident Worker's Card", fee: "Not published", time: "Apply through your school or employer", url: p === "study" ? "https://www.gov.mo/en/services/ps-1479/" : "https://www.gov.mo/en/services/ps-1477/" },
+        checklist: [item(p === "study" ? "Admission letter from a Macao institution" : "Employer's employment authorisation", ""), common.passport(passport)]
+      };
+      if (nat === "CN") {
+        if (p === "transit") return { status: "free", stay: "7 days", summary: "PRC passport holders in transit get up to 7 days, with an onward ticket and a visa for your destination.", checklist: [common.passport(passport), common.ticket()] };
+        return {
+          status: "permit", stay: "As shown on your endorsement (up to 90 days)",
+          summary: "Mainland residents need an Exit-Entry Permit for Travelling to and from Hong Kong and Macao, with a valid Macao endorsement.",
+          auth: { name: "Exit-Entry Permit + Macao endorsement", fee: "Varies", time: "Apply in the mainland", url: MO_URL },
+          checklist: [item("Exit-Entry Permit with a Macao endorsement", "")]
+        };
+      }
+      if (nat === "HK") return { status: "free", stay: "Up to 1 year", summary: "Hong Kong permanent residents enter with their permanent identity card or re-entry permit.", checklist: [item("HK permanent identity card or re-entry permit", "")] };
+      if (nat === "TW") return { status: "check", summary: "We couldn't confirm the rules for Taiwan residents on an official page. Ask the Public Security Police.", checklist: [common.passport(passport)], links: [["Public Security Police", "https://www.fsm.gov.mo/psp/"]] };
+      const stay = MO_180.has(nat) ? "6 months" : MO_90.has(nat) ? (S("CY IL LB NZ").has(nat) ? "3 months" : "90 days") : MO_30.has(nat) ? "30 days" : MO_14.has(nat) ? "14 days" : null;
+      if (stay) return {
+        status: "free", stay,
+        summary: p === "transit" ? "No visa needed." : "No visa needed for this visit. You don't need an arrival card.",
+        checklist: [common.passport(passport), common.ticket()],
+        ...(nat === "US" ? { notes: ["US diplomatic passports aren't covered."] } : {})
+      };
+      if (MO_ADVANCE.has(nat)) return {
+        status: "visa",
+        summary: "You must get a Macao visa in advance from a Chinese embassy or consulate. There's no visa on arrival for your nationality.",
+        checklist: visitorChecklist({ purpose: p, passport }),
+        links: [["Entry rules for non-residents (gov.mo)", MO_URL]]
+      };
+      if (p === "transit") return { status: "check", summary: "Airport transit is usually exempt from visas, with exceptions we couldn't confirm. Ask your airline.", checklist: [common.passport(passport)], links: [["Entry rules for non-residents (gov.mo)", MO_URL]] };
+      return {
+        status: "voa", stay: "Up to 30 days",
+        auth: { name: "Authorization to Enter and Stay (visa on arrival)", fee: "MOP200 single, MOP300 multiple (children under 12 half price)", time: "At the checkpoint visa room", url: MO_URL },
+        summary: "Get a visa on arrival at the checkpoint visa room.",
+        checklist: [common.passport(passport), item("Visa fee", "MOP200 (single) or MOP300 (multiple entry)."), common.ticket(), common.funds()]
+      };
+    }
+  };
+
+  // =====================================================================
+  // JORDAN
+  // Sources (checked 2026-11-27):
+  //  https://moi.gov.jo/EN/Pages/Restricted_and_Non_Restricted_Countries_Nationalities (Ministry of Interior restricted list)
+  //  https://moi.gov.jo/AR/Pages/%D8%A7%D9%84%D9%8A%D8%A9_%D8%AF%D8%AE%D9%88%D9%84_%D8%A7%D9%84%D9%85%D9%85%D9%84%D9%83%D8%A9 (US/Schengen visa holders need no prior approval, 09/11/2025)
+  //  https://moi.gov.jo/En/Pages/E_Applications_for_Visa_and_Residence_Permits (eVisa portal, 09/11/2025) ; https://moi.gov.jo/EN/Modules/FAQ
+  //  https://jordanpass.jo/Contents/FAQs.aspx (Ministry of Tourism: VOA JOD 40, Jordan Pass waiver after 2+ nights, fee-exempt nationalities)
+  //  https://psd.gov.jo/media/lncmdl3i/servcies.pdf (Public Security Directorate: stays, registration, residency fees)
+  //  https://travel.gc.ca/destinations/jordan (Government of Canada, 28 Oct 2026: no VOA at King Hussein Bridge, police registration)
+  //  http://jordanembassy.org.uk/consulate/visas/ (Yemeni, Iraqi, Libyan UK residents)
+  // Arab nationalities not on the restricted list have separate border rules we couldn't confirm, so they return "check".
+  // =====================================================================
+  const JO_RESTRICTED = S("AF IR PG PK LK PH KH LA MN MM NP IQ YE BD ET ER CF AO UG BW BJ BF BI TD TZ TG DJ CD ZM CI SN SL SO GA GM GH GN GQ GW CM CG LR ML MG KM MR MZ NA NE NG SD BZ CU");
+  const JO_ARAB = S("BH KW OM QA SA AE DZ EG LB LY MA PS SY TN");
+  const JO_FEE_FREE = S("ZA MY HK JP VA TR");
+  const JO_EV = "https://eservices.moi.gov.jo/MOI_EVISA/faces/Pages/Runnables/login.jsf";
+
+  const JO = {
+    id: "JO", name: "Jordan", flag: "🇯🇴", verified: "2026-11-27",
+    links: [
+      ["Jordan eVisa (Ministry of Interior)", JO_EV],
+      ["Restricted nationalities (MOI)", "https://moi.gov.jo/EN/Pages/Restricted_and_Non_Restricted_Countries_Nationalities"],
+      ["Jordan Pass (Ministry of Tourism)", "https://www.jordanpass.jo/"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months.";
+      const reg = "Staying more than 14 days? Register at a police station within 13 days of arrival.";
+      if (nat === "JO") return { status: "citizen", summary: "Enter on your Jordanian passport." };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a study visa and then a student residency, with confirmation from your institution." : "Work needs a work permit from the Ministry of Labour, then a work visa and labour residency.",
+        auth: { name: p === "study" ? "Study visa + residency" : "Work permit + labour residency", fee: p === "study" ? "Student residency free" : "Residency JOD 30", time: "About 2 weeks for the visa", url: JO_EV },
+        checklist: [item(p === "study" ? "Confirmation of study" : "Ministry of Labour work permit", ""), common.passport(passport), common.photo()]
+      };
+      if (p === "transit") return { status: "check", summary: "A transit visa (JOD 3) needs a Ministry of Interior letter. We couldn't confirm the rules for staying airside. Ask your airline.", checklist: [common.passport(passport)], links: [["Jordan eVisa (Ministry of Interior)", JO_EV]] };
+      const ukRes = (nat === "YE" || nat === "IQ" || nat === "LY") && has(ctx, "pr:GB");
+      const gccIraqi = nat === "IQ" && has(ctx, "pr:AE");
+      if (ukRes || gccIraqi || (JO_RESTRICTED.has(nat) && has(ctx, "visa:US", "visa:SCHENGEN"))) return {
+        status: "voa", stay: "1 month (extendable)",
+        auth: { name: "Visa on arrival", fee: "JOD 40", time: "On arrival", url: "https://jordanpass.jo/Contents/FAQs.aspx" },
+        summary: ukRes ? "With a UK residence permit valid more than 6 months, you need no prior approval and can get a visa at the border." : gccIraqi ? "Iraqis with a Gulf residence permit valid 6+ months get a visa at the border, with a return ticket." : "Your valid US or Schengen visa means you don't need prior approval. You can get a visa on arrival.",
+        checklist: lightChecklist({ purpose: p, passport, extra: [item(ukRes ? "UK residence permit" : gccIraqi ? "Gulf residence permit" : "Valid US or Schengen visa", "Valid at least 6 months.")] }),
+        notes: [reg, "No visa on arrival at the King Hussein (Allenby) Bridge."]
+      };
+      if (JO_RESTRICTED.has(nat)) return {
+        status: "visa",
+        auth: { name: "Visa with prior approval (eVisa)", fee: "JOD 2 service fee + visa fee", time: "About 2 weeks", url: JO_EV },
+        summary: "Your nationality is restricted: you need Ministry of Interior approval before travel. Apply through the eVisa portal, usually with a sponsor in Jordan.",
+        checklist: visitorChecklist({ purpose: p, passport, extra: [item("Sponsor in Jordan", "A financial guarantee of JOD 1,000 per person may be needed.")] }),
+        notes: [reg]
+      };
+      if (JO_ARAB.has(nat)) return {
+        status: "check",
+        summary: "Arab nationals have separate entry rules at Jordan's borders that we couldn't confirm. Ask a Jordanian embassy.",
+        checklist: [common.passport(passport)],
+        links: [["Jordan eVisa (Ministry of Interior)", JO_EV]]
+      };
+      const feeFree = JO_FEE_FREE.has(nat);
+      return {
+        status: "voa", stay: "1 month (extendable)",
+        auth: { name: "Visa on arrival", fee: feeFree ? "Free for your nationality" : "JOD 40 (free with a Jordan Pass and a stay of 2+ nights)", time: "On arrival, or apply online in advance", url: "https://jordanpass.jo/Contents/FAQs.aspx" },
+        summary: "Get a visa on arrival at Queen Alia airport and most land borders, or apply online in advance." + (feeFree ? "" : " Buy the Jordan Pass before you arrive and the visa fee is waived if you stay at least 2 nights."),
+        checklist: lightChecklist({ purpose: p, passport, ...(feeFree ? {} : { auth: item("Jordan Pass or JOD 40", "Buy the Jordan Pass online before arrival.", "https://www.jordanpass.jo/") }) }),
+        notes: [reg, "No visa on arrival at the King Hussein (Allenby) Bridge."]
+      };
+    }
+  };
+
+  // =====================================================================
+  // OMAN
+  // Sources (checked 2026-11-27):
+  //  https://www.fm.gov.om/en/visitors/entry-visas/ (Ministry of Foreign Affairs, 22 Sep 2026: 14-day visa-free groups 1 and 2, conditions)
+  //  https://evisa.rop.gov.om/Evisa-home-theme/faq_pages/faq_en.html (Royal Oman Police eVisa FAQ: types, apply 4 days ahead)
+  //  https://gov.om/en/w/get-sponsored-tourist-visa (OMR 5/10 days, OMR 20/30 days) ; https://gov.om/en/w/get-airport-transit-visa (OMR 5, 72 hours)
+  //  https://gov.om/en/w/get-a-work-visa (OMR 20) ; https://www.rop.gov.om/english/Visas.aspx?VisaName=StudentVisa
+  // The standard unsponsored eVisa's eligibility and fee couldn't be read (JavaScript site), so nationalities not on the
+  // visa-free lists return "check" with the official eligibility tool.
+  // "French Guinea" on the group 1 list is ambiguous and is left out.
+  // =====================================================================
+  const OM_G1 = S("AL AD AR AM AU AT BY BE BO BA BR BN BG CA CL CN HK MO CO HR CY CZ DK EC EE FI FR GE DE GR HU IS ID IR IE IT JP KZ LV LB LI LT LU MK MY MT MU MD MC NL NZ NO PY PH PL PT RO RU SM RS SC SG SK SI ZA KR ES SR SE CH TH TR UA GB US UY UZ VA VE");
+  const OM_G2 = S("DZ AZ BT CR CU EG SV GT HN IN JO KG LA MV MR MX MA NI PA PE TJ TN TM VN");
+  const OM_EV = "https://evisa.rop.gov.om/en/home";
+
+  const OM = {
+    id: "OM", name: "Oman", flag: "🇴🇲", verified: "2026-11-27",
+    links: [
+      ["Oman eVisa (Royal Oman Police)", OM_EV],
+      ["Entry visas (Ministry of Foreign Affairs)", "https://www.fm.gov.om/en/visitors/entry-visas/"],
+      ["Check your eVisa eligibility", "https://evisa.rop.gov.om/visa-eligibility"]
+    ],
+    evaluate(nat, ctx) {
+      const p = ctx.purpose;
+      const passport = "Valid at least 6 months.";
+      const conds = [common.ticket(), item("Confirmed hotel booking", ""), item("Health insurance", "Required for visa-free entry."), common.funds()];
+      if (nat === "OM") return { status: "citizen", summary: "Enter on your Omani passport." };
+      if (GCC.has(nat)) return { status: "free", summary: "GCC citizens don't need a visa.", checklist: [item("GCC passport or national ID card", "")] };
+      if (p === "study" || p === "work") return {
+        status: "permit",
+        summary: p === "study" ? "Study needs a Student Visa sponsored by a licensed Omani institution." : "Work needs a Work Visa sponsored by your employer, after a Ministry of Labour permit.",
+        auth: { name: p === "study" ? "Student Visa" : "Work Visa", fee: p === "study" ? "30 (as listed by ROP)" : "OMR 20", time: "Applied for by your sponsor", url: p === "study" ? "https://www.rop.gov.om/english/Visas.aspx?VisaName=StudentVisa" : "https://gov.om/en/w/get-a-work-visa" },
+        checklist: [item(p === "study" ? "Admission from an Omani institution" : "Employer sponsorship and labour permit", ""), common.passport(passport), ...(S("IN PK BD PH ID LK EG SD ET SY NP").has(nat) ? [item("Medical certificate", "Required for your nationality.")] : [])]
+      };
+      const g2ok = OM_G2.has(nat) && has(ctx, "visa:US", "visa:CA", "visa:AU", "visa:GB", "visa:SCHENGEN", "visa:JP", "pr:AE");
+      if (p === "transit" && !(OM_G1.has(nat) || g2ok)) return {
+        status: "check",
+        summary: "An airport transit visa (OMR 5, up to 72 hours) exists, but only airlines can apply for it. We couldn't confirm the rules for staying airside. Ask your airline.",
+        checklist: [common.passport(passport)],
+        links: [["Airport transit visa (gov.om)", "https://gov.om/en/w/get-airport-transit-visa"]]
+      };
+      if (OM_G1.has(nat) || g2ok) return {
+        status: g2ok ? "resident" : "free", stay: "14 days (can't be extended)",
+        summary: (g2ok ? "Your visa or Gulf residence lets you enter Oman visa-free." : "No visa needed for up to 14 days.") + " For a longer stay, get a tourist eVisa instead.",
+        checklist: [common.passport(passport), ...(g2ok ? [item("Your qualifying visa or residence card", "Must be valid on arrival.")] : []), ...conds],
+        notes: ["Spouses and children travelling with you get the same treatment."]
+      };
+      return {
+        status: "check",
+        summary: OM_G2.has(nat) ? "You can enter visa-free for 14 days only with a valid US, Canada, Australia, UK, Schengen or Japan visa, or Gulf residence. Otherwise you need an eVisa: check your eligibility with the Royal Oman Police." : "You need a visa. We couldn't read Oman's eVisa eligibility list for your nationality. Use the official eligibility checker or ask an Omani embassy.",
+        checklist: [common.passport(passport)],
+        links: [["Check your eVisa eligibility", "https://evisa.rop.gov.om/visa-eligibility"], ["Sponsored tourist visa via a tour company (gov.om)", "https://gov.om/en/w/get-sponsored-tourist-visa"]]
+      };
+    }
+  };
+
   // ---------- Engine ----------
   const DESTINATIONS = [US, CA, GB, FR, DE, IT, ES, NL, PT, GR, CH, AU, JP, AE, MX, BH, IN, TH, IE, NZ, TR, SG, KR, CN, SA,
     BR, AT, BE, CZ, PL, HU, HR, DK, SE, NO,
     FI, IS, MT, LU, SI, SK, EE, LV, LT, RO,
     BG, LI, VN, ID, MY, PH, EG, MA, ZA, QA,
-    IL, AR, CO, PE, CL, CR, DO, JM, CU, KE];
+    IL, AR, CO, PE, CL, CR, DO, JM, CU, KE,
+    TZ, LK, MV, NP, KH, TW, HK, MO, JO, OM];
 
   function evaluateTrip({ nationalities, destination, purpose, docs }) {
     const dest = DESTINATIONS.find((d) => d.id === destination);

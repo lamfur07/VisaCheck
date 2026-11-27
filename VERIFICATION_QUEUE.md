@@ -71,16 +71,16 @@ When a country is verified and merged, tick it and add the date. The 15 already 
 
 ## Batch 6
 
-- [ ] TZ Tanzania
-- [ ] LK Sri Lanka
-- [ ] MV Maldives
-- [ ] NP Nepal
-- [ ] KH Cambodia
-- [ ] TW Taiwan
-- [ ] HK Hong Kong SAR
-- [ ] MO Macao SAR
-- [ ] JO Jordan
-- [ ] OM Oman
+- [x] TZ Tanzania (2026-11-27)
+- [x] LK Sri Lanka (2026-11-27)
+- [x] MV Maldives (2026-11-27)
+- [x] NP Nepal (2026-11-27)
+- [x] KH Cambodia (2026-11-27)
+- [x] TW Taiwan (2026-11-27)
+- [x] HK Hong Kong SAR (2026-11-27)
+- [x] MO Macao SAR (2026-11-27)
+- [x] JO Jordan (2026-11-27)
+- [x] OM Oman (2026-11-27)
 
 ## Batch 7
 
